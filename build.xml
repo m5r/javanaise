@@ -1,0 +1,124 @@
+<!--
+ ! This library is free software; you can redistribute it and/or
+ ! modify it under the terms of the GNU Lesser General Public
+ ! License as published by the Free Software Foundation; either
+ ! version 2 of the License, or (at your option) any later version.
+ !
+ ! This library is distributed in the hope that it will be useful,
+ ! but WITHOUT ANY WARRANTY; without even the implied warranty of
+ ! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ ! Lesser General Public License for more details.
+ !
+ ! You should have received a copy of the GNU Lesser General Public
+ ! License along with this library; if not, write to the Free Software
+ ! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ ! Contact: sebastien.chassande@inrialpes.fr
+ !
+-->
+<project name="JAVANAISE" default="compile">
+
+	<!-- =======================================================
+	load the following user properties from a file:
+		- build.compiler: Wich compiler do you want use ? (optional)
+		- build: Where do you want generate compilate object ?
+		- dist: Where do you want to generate the distribution of the project ?
+	======================================================== -->
+	<property file="build.properties"/>
+	
+
+	<!-- ======== PROPERTY DEFINITION ==========================================-->
+	<!-- src contains source files	of Javanaise								-->
+	<!-- external contains external libraries (jar files) used by Javanaise		-->
+	<!-- dist.lib contains the .jar files of the Javanaise distribution			-->
+	<!-- dist.jdoc contains the javadoc files of the Javanaise distribution		-->
+	<!-- =======================================================================-->
+	<property name="src" 			 	value="${basedir}/src"/>
+	<property name="external" 			value="${basedir}/external"/>
+	<property name="dist.lib" 			value="${dist}/lib"/>   
+	<property name="dist.jdoc" 			value="${dist}/jdoc"/> 
+	
+
+	<!--====================================-->
+	<!--==========     classpath  ==========-->
+	<!--====================================-->
+  <path id="classpath">
+  	<pathelement location="${build}"/>
+    <fileset dir="${basedir}">
+      <include name="externals/**/*.jar"/>
+    </fileset>
+  </path>
+    	
+
+	<!--====================================-->
+	<!--==========     HELP       ==========-->
+	<!-- print the usage of this ant file   -->
+	<!--====================================-->
+
+	<target name="help">
+		<echo message="The available target is the following:"/>
+		<echo message="  compile: compiles the product into ${build}"/>
+		<echo message="  clean: removes all produced files."/>
+		<echo message="  dist: creates a distribution in ${dist.lib}"/>
+		<echo message="  genjvn: generates jvn interposition classes"/>
+		
+		<echo message=""/>
+	</target>
+
+
+	<!--===================================-->
+	<!--==========    COMPILE    ==========-->
+	<!--===================================-->
+
+	<target name="compile">
+		<mkdir dir="${build}"/>
+		<javac srcdir="${src}" destdir="${build}" debug="on">
+			<classpath refid="classpath"/>
+			<include name="**/*.java"/>
+		</javac>
+		<rmic classname="jvn.JvnServerImpl" base="${build}"/>
+		<rmic classname="jvn.JvnCoordImpl" base="${build}"/>
+		<copy toDir="${build}" preservelastmodified="yes">
+			<fileset dir="${src}">
+				<include name="**/*.vm"/>
+			</fileset>
+		</copy>
+	</target>
+
+	<!--===================================-->
+	<!--==========    DIST    ==========-->
+	<!--===================================-->
+	<target name="dist" depends="compile">
+	  <mkdir dir="${dist}"/>
+   	  <mkdir dir="${dist.lib}"/>
+      <jar destfile="${dist.lib}/javanaise.jar" >
+        <fileset dir="${build}" />
+      </jar>
+      <copy todir="${dist.lib}" >
+        <fileset dir="${external}">
+          <include name="**/*.jar"/>
+        </fileset>
+      </copy> 
+	</target>
+	
+	
+	<!-- ===================================--> 
+	<!-- ==========    GenJvn    ==========--> 
+	<!-- ===================================--> 
+	<target name="genjvn" depends="compile">
+	<java classname="compilator.GenJvn">
+	  <arg value="${genjvnparam}" /> 
+	  <classpath refid="classpath" /> 
+	</java>
+	</target>
+
+	<!--===================================-->
+	<!--==========     CLEAN     ==========-->
+	<!--===================================-->
+	<!-- remove all directories -->
+	<target name="clean">
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+	</target>
+	
+
+</project>
