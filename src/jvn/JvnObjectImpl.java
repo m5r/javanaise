@@ -6,6 +6,7 @@ public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
     private JvnServerImpl jvnServer;
+    private JvnObjectLock lock;
 
     JvnObjectImpl(Serializable o, int objectId, JvnServerImpl js) throws JvnException {
         state = o;

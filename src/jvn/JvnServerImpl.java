@@ -13,6 +13,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.*;
 import java.util.HashMap;
+import java.util.UUID;
 
 
 public class JvnServerImpl
@@ -21,8 +22,9 @@ public class JvnServerImpl
 
     // A JVN server is managed as a singleton
     private static JvnServerImpl js = null;
+    private static JvnRemoteCoord jvnCoord = null;
     private HashMap<String, JvnObject> store;
-    private JvnRemoteCoord jvnCoord;
+    public final UUID id;
 
     /**
      * Default constructor
@@ -33,13 +35,26 @@ public class JvnServerImpl
         super();
         // to be completed
         store = new HashMap<>();
-        try {
-            Registry registry = LocateRegistry.getRegistry(1029);
-            jvnCoord = (JvnRemoteCoord) registry.lookup("JvnCoord");
-        } catch (Exception e) {
-            System.err.println("JvnCoord exception: " + e.toString());
-            e.printStackTrace();
+        id = UUID.randomUUID();
+    }
+
+    /**
+     * Static method allowing an application to get a reference to
+     * a JVN coordinator instance
+     *
+     * @throws JvnException
+     **/
+    public static JvnRemoteCoord jvnGetCoord() {
+        if (jvnCoord == null) {
+            try {
+                Registry registry = LocateRegistry.getRegistry(1029);
+                jvnCoord = (JvnRemoteCoord) registry.lookup("JvnCoord");
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
         }
+        return jvnCoord;
     }
 
     /**
@@ -80,7 +95,7 @@ public class JvnServerImpl
         // to be completed
         int objectId;
         try {
-            objectId = jvnCoord.jvnGetObjectId();
+            objectId = jvnGetCoord().jvnGetObjectId();
         } catch (Exception e) {
             System.err.println("JvnCoord exception: int" + e.toString());
             e.printStackTrace();
@@ -104,6 +119,13 @@ public class JvnServerImpl
     public void jvnRegisterObject(String jon, JvnObject jo)
             throws jvn.JvnException {
         // to be completed
+        try {
+            jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
+            store.put(jon, jo);
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: " + e.toString());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -116,7 +138,12 @@ public class JvnServerImpl
     public JvnObject jvnLookupObject(String jon)
             throws jvn.JvnException {
         // to be completed
-        return store.get(jon);
+        try {
+            return jvnGetCoord().jvnLookupObject(jon, js);
+        } catch (Exception e) {
+            System.out.printf("Failed to lookup object with name \"%s\" from coordinator, falling back to local cache\n", jon);
+            return store.get(jon);
+        }
     }
 
     /**
@@ -129,8 +156,12 @@ public class JvnServerImpl
     public Serializable jvnLockRead(int joi)
             throws JvnException {
         // to be completed
-        return null;
-
+        try {
+            return jvnGetCoord().jvnLockRead(joi, jvnGetServer());
+        } catch (Exception e) {
+            System.out.printf("Failed to get a read lock for object with id \"%d\" from coordinator\n", joi);
+            return null;
+        }
     }
 
     /**
@@ -143,7 +174,12 @@ public class JvnServerImpl
     public Serializable jvnLockWrite(int joi)
             throws JvnException {
         // to be completed
-        return null;
+        try {
+            return jvnGetCoord().jvnLockWrite(joi, jvnGetServer());
+        } catch (Exception e) {
+            System.out.printf("Failed to get a write lock for object with id \"%d\" from coordinator\n", joi);
+            return null;
+        }
     }
 
 
@@ -160,8 +196,6 @@ public class JvnServerImpl
         // to be completed
     }
 
-    ;
-
     /**
      * Invalidate the Write lock of the JVN object identified by id
      *
@@ -175,8 +209,6 @@ public class JvnServerImpl
         return null;
     }
 
-    ;
-
     /**
      * Reduce the Write lock of the JVN object identified by id
      *
@@ -189,8 +221,6 @@ public class JvnServerImpl
         // to be completed
         return null;
     }
-
-    ;
 
 }
 

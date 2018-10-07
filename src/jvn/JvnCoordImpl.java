@@ -12,12 +12,15 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
-
+import java.util.HashMap;
 
 public class JvnCoordImpl
         extends UnicastRemoteObject
         implements JvnRemoteCoord {
 
+    private HashMap<String, Integer> interalIdLookupTable;
+    private HashMap<Integer, JvnObject> store;
+    private HashMap<Integer, JvnObjectLock> locks;
     private int objectCount;
 
     /**
@@ -27,6 +30,9 @@ public class JvnCoordImpl
      **/
     private JvnCoordImpl() throws Exception {
         // to be completed
+        interalIdLookupTable = new HashMap<>();
+        store = new HashMap<>();
+        locks = new HashMap<>();
         objectCount = 0;
     }
 
@@ -47,13 +53,24 @@ public class JvnCoordImpl
      *
      * @param jon : the JVN object name
      * @param jo  : the JVN object
-     * @param joi : the JVN object identification
-     * @param js  : the remote reference of the JVNServer
+     *            //     * @param joi : the JVN object identification
+     *            //     * @param js  : the remote reference of the JVNServer
      * @throws java.rmi.RemoteException,JvnException
      **/
     public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        if (interalIdLookupTable.get(jon) != null) {
+            throw new jvn.JvnException(String.format("Object with name %s already registered", jon));
+        }
+
+        try {
+            interalIdLookupTable.put(jon, jo.jvnGetObjectId());
+            store.put(jo.jvnGetObjectId(), jo);
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: " + e.toString());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -66,7 +83,8 @@ public class JvnCoordImpl
     public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        return null;
+        int joi = interalIdLookupTable.get(jon);
+        return store.get(joi);
     }
 
     /**
@@ -121,5 +139,3 @@ public class JvnCoordImpl
         }
     }
 }
-
- 
