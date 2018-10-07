@@ -13,6 +13,10 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.locks.Lock;
 
 public class JvnCoordImpl
         extends UnicastRemoteObject
@@ -87,6 +91,16 @@ public class JvnCoordImpl
         return store.get(joi);
     }
 
+    private JvnObjectLock getJvnObjectLockFromId(int joi) {
+        JvnObjectLock jvnObjectLock = locks.get(joi);
+
+        if (jvnObjectLock == null) {
+            jvnObjectLock = new JvnObjectLock();
+        }
+
+        return jvnObjectLock;
+    }
+
     /**
      * Get a Read lock on a JVN object managed by a given JVN server
      *
@@ -95,10 +109,17 @@ public class JvnCoordImpl
      * @return the current JVN object state
      * @throws java.rmi.RemoteException, JvnException
      **/
-    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
+    public synchronized Serializable jvnLockRead(int joi, JvnRemoteServer js)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
-        return null;
+        JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
+
+        waitForLock(jvnObjectLock);
+
+        jvnObjectLock.entrySet().iterator().next().setValue(LockState.RC);
+        jvnObjectLock.put(UUID.fromString(js.toString()), LockState.R);
+
+        return store.get(joi);
     }
 
     /**
@@ -112,7 +133,29 @@ public class JvnCoordImpl
     public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
-        return null;
+        JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
+
+        waitForLock(jvnObjectLock);
+
+        jvnObjectLock.entrySet().iterator().next().setValue(LockState.NoLock);
+        jvnObjectLock.put(UUID.fromString(js.toString()), LockState.W);
+
+        return store.get(joi);
+    }
+
+    private void waitForLock(JvnObjectLock jvnObjectLock) {
+        boolean waitCondition = jvnObjectLock.containsValue(LockState.W) ||
+                jvnObjectLock.containsValue(LockState.R) ||
+                jvnObjectLock.containsValue(LockState.RWC);
+
+        while (waitCondition) {
+            try {
+                wait();
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -124,6 +167,10 @@ public class JvnCoordImpl
     public void jvnTerminate(JvnRemoteServer js)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
+        locks.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().containsKey(UUID.fromString(js.toString())))
+                .forEach(entry -> entry.setValue(null));
     }
 
     public static void main(String argv[]) {

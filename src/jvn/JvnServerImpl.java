@@ -38,6 +38,11 @@ public class JvnServerImpl
         id = UUID.randomUUID();
     }
 
+    @Override
+    public String toString() {
+        return id.toString();
+    }
+
     /**
      * Static method allowing an application to get a reference to
      * a JVN coordinator instance
