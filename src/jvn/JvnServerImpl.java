@@ -8,8 +8,11 @@
 
 package jvn;
 
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.*;
+import java.util.HashMap;
 
 
 public class JvnServerImpl
@@ -18,6 +21,8 @@ public class JvnServerImpl
 
     // A JVN server is managed as a singleton
     private static JvnServerImpl js = null;
+    private HashMap<String, JvnObject> store;
+    private JvnRemoteCoord jvnCoord;
 
     /**
      * Default constructor
@@ -27,6 +32,14 @@ public class JvnServerImpl
     private JvnServerImpl() throws Exception {
         super();
         // to be completed
+        store = new HashMap<>();
+        try {
+            Registry registry = LocateRegistry.getRegistry(1029);
+            jvnCoord = (JvnRemoteCoord) registry.lookup("JvnCoord");
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: " + e.toString());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -65,7 +78,20 @@ public class JvnServerImpl
     public JvnObject jvnCreateObject(Serializable o)
             throws jvn.JvnException {
         // to be completed
-        return null;
+        int objectId;
+        try {
+            objectId = jvnCoord.jvnGetObjectId();
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: int" + e.toString());
+            e.printStackTrace();
+
+            throw new jvn.JvnException("Error getting object id from JvnCoord");
+        }
+
+        JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId, jvnGetServer());
+        interceptionObject.jvnLockWrite();
+
+        return interceptionObject;
     }
 
     /**
@@ -90,7 +116,7 @@ public class JvnServerImpl
     public JvnObject jvnLookupObject(String jon)
             throws jvn.JvnException {
         // to be completed
-        return null;
+        return store.get(jon);
     }
 
     /**

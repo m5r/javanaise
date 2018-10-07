@@ -18,6 +18,7 @@ public class JvnCoordImpl
         extends UnicastRemoteObject
         implements JvnRemoteCoord {
 
+    private int objectCount;
 
     /**
      * Default constructor
@@ -26,6 +27,7 @@ public class JvnCoordImpl
      **/
     private JvnCoordImpl() throws Exception {
         // to be completed
+        objectCount = 0;
     }
 
     /**
@@ -37,7 +39,7 @@ public class JvnCoordImpl
     public int jvnGetObjectId()
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        return 0;
+        return objectCount++;
     }
 
     /**
