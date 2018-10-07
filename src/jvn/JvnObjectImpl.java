@@ -6,12 +6,13 @@ public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
     private JvnServerImpl jvnServer;
-    private JvnObjectLock lock;
+    private LockState lock;
 
     JvnObjectImpl(Serializable o, int objectId, JvnServerImpl js) throws JvnException {
         state = o;
         id = objectId;
         jvnServer = js;
+        lock = LockState.NoLock;
     }
 
     /**
@@ -21,7 +22,15 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public void jvnLockRead()
             throws jvn.JvnException {
-        jvnServer.jvnLockRead(id);
+        if (lock != LockState.WC && lock != LockState.RC) {
+            state = jvnServer.jvnLockRead(id);
+        }
+
+        if (lock == LockState.WC) {
+            lock = LockState.RWC;
+        } else {
+            lock = LockState.R;
+        }
     }
 
     /**
@@ -31,7 +40,8 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public void jvnLockWrite()
             throws jvn.JvnException {
-        jvnServer.jvnLockWrite(id);
+        state = jvnServer.jvnLockWrite(id);
+        lock = LockState.W;
     }
 
     /**
@@ -41,7 +51,18 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public void jvnUnLock()
             throws jvn.JvnException {
+        switch (lock) {
+            case R:
+                lock = LockState.RC;
+                break;
+            case W:
+                lock = LockState.WC;
+                break;
+            default:
+                break;
+        }
 
+        notify();
     }
 
 
@@ -73,7 +94,16 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public void jvnInvalidateReader()
             throws jvn.JvnException {
+        while (lock != LockState.RC) {
+            try {
+                wait();
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
+        }
 
+        lock = LockState.NoLock;
     }
 
     /**
@@ -82,9 +112,19 @@ public class JvnObjectImpl implements JvnObject {
      * @return the current JVN object state
      * @throws JvnException
      **/
-    public Serializable jvnInvalidateWriter()
+    public synchronized Serializable jvnInvalidateWriter()
             throws jvn.JvnException {
-        return null;
+        while (lock != LockState.WC || lock != LockState.RWC) {
+            try {
+                wait();
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
+        }
+
+        lock = LockState.NoLock;
+        return state;
     }
 
     /**
@@ -95,6 +135,21 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public Serializable jvnInvalidateWriterForReader()
             throws jvn.JvnException {
-        return null;
+        while (lock != LockState.WC || lock != LockState.RWC) {
+            try {
+                wait();
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
+        }
+
+        if (lock == LockState.RWC) {
+            lock = LockState.R;
+        } else {
+            lock = LockState.RC;
+        }
+
+        return state;
     }
 }

@@ -24,7 +24,8 @@ public class JvnServerImpl
     private static JvnServerImpl js = null;
     private static JvnRemoteCoord jvnCoord = null;
     private HashMap<String, JvnObject> store;
-    public final UUID id;
+    private HashMap<Integer, String> internalIdLookupTable;
+    private final UUID id;
 
     /**
      * Default constructor
@@ -35,7 +36,12 @@ public class JvnServerImpl
         super();
         // to be completed
         store = new HashMap<>();
+        internalIdLookupTable = new HashMap<>();
         id = UUID.randomUUID();
+
+        Registry registry = LocateRegistry.createRegistry(1029);
+        JvnServerImpl stub = (JvnServerImpl) UnicastRemoteObject.exportObject(this, 0);
+        registry.bind(id.toString(), stub);
     }
 
     @Override
@@ -87,6 +93,12 @@ public class JvnServerImpl
     public void jvnTerminate()
             throws jvn.JvnException {
         // to be completed
+        try {
+            jvnGetCoord().jvnTerminate(jvnGetServer());
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: " + e.toString());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -127,6 +139,7 @@ public class JvnServerImpl
         try {
             jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
             store.put(jon, jo);
+            internalIdLookupTable.put(jo.jvnGetObjectId(), jon);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -199,6 +212,8 @@ public class JvnServerImpl
     public void jvnInvalidateReader(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
+        jvnObject.jvnInvalidateReader();
     }
 
     /**
@@ -211,7 +226,9 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriter(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        return null;
+        JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
+        jvnObject.jvnInvalidateWriter();
+        return jvnObject;
     }
 
     /**
@@ -224,7 +241,9 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriterForReader(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        return null;
+        JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
+        jvnObject.jvnInvalidateWriterForReader();
+        return jvnObject;
     }
 
 }

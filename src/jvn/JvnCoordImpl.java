@@ -13,16 +13,13 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.locks.Lock;
 
 public class JvnCoordImpl
         extends UnicastRemoteObject
         implements JvnRemoteCoord {
 
-    private HashMap<String, Integer> interalIdLookupTable;
+    private HashMap<String, Integer> internalIdLookupTable;
     private HashMap<Integer, JvnObject> store;
     private HashMap<Integer, JvnObjectLock> locks;
     private int objectCount;
@@ -34,7 +31,7 @@ public class JvnCoordImpl
      **/
     private JvnCoordImpl() throws Exception {
         // to be completed
-        interalIdLookupTable = new HashMap<>();
+        internalIdLookupTable = new HashMap<>();
         store = new HashMap<>();
         locks = new HashMap<>();
         objectCount = 0;
@@ -64,12 +61,12 @@ public class JvnCoordImpl
     public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        if (interalIdLookupTable.get(jon) != null) {
+        if (internalIdLookupTable.get(jon) != null) {
             throw new jvn.JvnException(String.format("Object with name %s already registered", jon));
         }
 
         try {
-            interalIdLookupTable.put(jon, jo.jvnGetObjectId());
+            internalIdLookupTable.put(jon, jo.jvnGetObjectId());
             store.put(jo.jvnGetObjectId(), jo);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
@@ -87,7 +84,7 @@ public class JvnCoordImpl
     public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        int joi = interalIdLookupTable.get(jon);
+        int joi = internalIdLookupTable.get(jon);
         return store.get(joi);
     }
 
@@ -113,11 +110,15 @@ public class JvnCoordImpl
             throws java.rmi.RemoteException, JvnException {
         // to be completed
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
+        UUID jsId = UUID.fromString(js.toString());
 
-        waitForLock(jvnObjectLock);
+        if (jvnObjectLock.containsValue(LockState.W)) {
+            UUID previousWriterJsId = jvnObjectLock.entrySet().iterator().next().getKey();
+            js.jvnInvalidateWriterForReader(joi);
+            jvnObjectLock.put(previousWriterJsId, LockState.R);
+        }
 
-        jvnObjectLock.entrySet().iterator().next().setValue(LockState.RC);
-        jvnObjectLock.put(UUID.fromString(js.toString()), LockState.R);
+        jvnObjectLock.put(jsId, LockState.R);
 
         return store.get(joi);
     }
@@ -134,28 +135,33 @@ public class JvnCoordImpl
             throws java.rmi.RemoteException, JvnException {
         // to be completed
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
+        UUID jsId = UUID.fromString(js.toString());
 
-        waitForLock(jvnObjectLock);
+        if (jvnObjectLock.containsValue(LockState.W)) {
+            UUID previousWriterJsId = jvnObjectLock.entrySet().iterator().next().getKey();
+            js.jvnInvalidateWriter(joi);
+            jvnObjectLock.put(previousWriterJsId, null);
+        }
 
+        if (jvnObjectLock.containsValue(LockState.R)) {
+            jvnObjectLock.entrySet().stream().forEach(entry -> {
+                try {
+                    UUID prevWriterJsId = entry.getKey();
+                    Registry registry = LocateRegistry.getRegistry(1029);
+                    JvnRemoteServer jvnServer = (JvnRemoteServer) registry.lookup(prevWriterJsId.toString());
+                    jvnServer.jvnInvalidateReader(joi);
+                    jvnObjectLock.put(prevWriterJsId, null);
+                } catch (Exception e) {
+                    System.err.println("JvnCoord exception: " + e.toString());
+                    e.printStackTrace();
+                }
+            });
+        }
+        
         jvnObjectLock.entrySet().iterator().next().setValue(LockState.NoLock);
-        jvnObjectLock.put(UUID.fromString(js.toString()), LockState.W);
+        jvnObjectLock.put(jsId, LockState.W);
 
         return store.get(joi);
-    }
-
-    private void waitForLock(JvnObjectLock jvnObjectLock) {
-        boolean waitCondition = jvnObjectLock.containsValue(LockState.W) ||
-                jvnObjectLock.containsValue(LockState.R) ||
-                jvnObjectLock.containsValue(LockState.RWC);
-
-        while (waitCondition) {
-            try {
-                wait();
-            } catch (Exception e) {
-                System.err.println("JvnCoord exception: " + e.toString());
-                e.printStackTrace();
-            }
-        }
     }
 
     /**
