@@ -19,7 +19,7 @@ public class JvnCoordImpl
         extends UnicastRemoteObject
         implements JvnRemoteCoord {
 
-    private HashMap<String, Integer> internalIdLookupTable;
+    private HashMap<UUID, HashMap<String, Integer>> internalIdLookupTable;
     private HashMap<Integer, JvnObject> store;
     private HashMap<Integer, JvnObjectLock> locks;
     private int objectCount;
@@ -61,12 +61,15 @@ public class JvnCoordImpl
     public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        if (internalIdLookupTable.get(jon) != null) {
+        UUID jsId = UUID.fromString(js.toString());
+        HashMap<String, Integer> jsObjectsLookupTable = internalIdLookupTable.computeIfAbsent(jsId, n -> new HashMap<>());
+
+        if (jsObjectsLookupTable.get(jon) != null) {
             throw new jvn.JvnException(String.format("Object with name %s already registered", jon));
         }
 
         try {
-            internalIdLookupTable.put(jon, jo.jvnGetObjectId());
+            jsObjectsLookupTable.put(jon, jo.jvnGetObjectId());
             store.put(jo.jvnGetObjectId(), jo);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
@@ -84,7 +87,9 @@ public class JvnCoordImpl
     public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        int joi = internalIdLookupTable.get(jon);
+        UUID jsId = UUID.fromString(js.toString());
+        HashMap<String, Integer> jsObjectsLookupTable = internalIdLookupTable.computeIfAbsent(jsId, n -> new HashMap<>());
+        int joi = jsObjectsLookupTable.get(jon);
         return store.get(joi);
     }
 
