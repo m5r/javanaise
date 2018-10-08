@@ -13,7 +13,6 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.UUID;
 
 public class JvnCoordImpl
         extends UnicastRemoteObject
@@ -171,7 +170,7 @@ public class JvnCoordImpl
         // to be completed
         locks.entrySet()
                 .stream()
-                .filter(entry -> entry.getValue().containsKey(UUID.fromString(js.toString())))
+                .filter(entry -> entry.getValue().containsKey(js))
                 .forEach(entry -> entry.setValue(null));
     }
 

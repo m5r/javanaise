@@ -5,7 +5,6 @@ import java.io.Serializable;
 public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
-    private JvnLocalServer jvnServer = JvnServerImpl.jvnGetServer();
     private LockState lock;
 
     JvnObjectImpl(Serializable o, int objectId) throws JvnException {
@@ -22,7 +21,7 @@ public class JvnObjectImpl implements JvnObject {
     public void jvnLockRead()
             throws jvn.JvnException {
         if (lock != LockState.WC && lock != LockState.RC) {
-            state = jvnServer.jvnLockRead(id);
+            state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
         }
 
         if (lock == LockState.WC) {
@@ -42,7 +41,7 @@ public class JvnObjectImpl implements JvnObject {
 //            switch
                 // WC: W
                 // RC, NL
-        state = jvnServer.jvnLockWrite(id);
+        state = JvnServerImpl.jvnGetServer().jvnLockWrite(id);
         lock = LockState.W;
     }
 

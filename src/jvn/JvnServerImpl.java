@@ -13,7 +13,6 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.*;
 import java.util.HashMap;
-import java.util.UUID;
 
 
 public class JvnServerImpl
@@ -25,7 +24,6 @@ public class JvnServerImpl
     private static JvnRemoteCoord jvnCoord = null;
     private HashMap<String, JvnObject> store;
     private HashMap<Integer, String> internalIdLookupTable;
-    private final UUID id;
 
     /**
      * Default constructor
@@ -37,15 +35,6 @@ public class JvnServerImpl
         // to be completed
         store = new HashMap<>();
         internalIdLookupTable = new HashMap<>();
-        id = UUID.randomUUID();
-
-        Registry registry = LocateRegistry.getRegistry(1029);
-        registry.bind(id.toString(), this);
-    }
-
-    @Override
-    public String toString() {
-        return id.toString();
     }
 
     /**
@@ -138,7 +127,7 @@ public class JvnServerImpl
             throws jvn.JvnException {
         // to be completed
         try {
-            jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
+            jvnGetCoord().jvnRegisterObject(jon, jo, (JvnRemoteServer) jvnGetServer());
             store.put(jon, jo);
             internalIdLookupTable.put(jo.jvnGetObjectId(), jon);
         } catch (Exception e) {
@@ -158,7 +147,7 @@ public class JvnServerImpl
             throws jvn.JvnException {
         // to be completed
         try {
-            return jvnGetCoord().jvnLookupObject(jon, js);
+            return jvnGetCoord().jvnLookupObject(jon, jvnGetServer());
         } catch (Exception e) {
             System.out.printf("Failed to lookup object with name \"%s\" from coordinator, falling back to local cache\n", jon);
             return store.get(jon);
