@@ -93,6 +93,7 @@ public class JvnCoordImpl
 
         if (jvnObjectLock == null) {
             jvnObjectLock = new JvnObjectLock();
+            locks.put(joi, jvnObjectLock);
         }
 
         return jvnObjectLock;

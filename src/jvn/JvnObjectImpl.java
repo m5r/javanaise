@@ -1,17 +1,20 @@
 package jvn;
 
 import java.io.Serializable;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.UUID;
 
 public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
-    private JvnServerImpl jvnServer;
+    private UUID jvnServerId;
     private LockState lock;
 
-    JvnObjectImpl(Serializable o, int objectId, JvnServerImpl js) throws JvnException {
+    JvnObjectImpl(Serializable o, int objectId, UUID jsId) throws JvnException {
         state = o;
         id = objectId;
-        jvnServer = js;
+        jvnServerId = jsId;
         lock = LockState.NoLock;
     }
 
@@ -23,7 +26,14 @@ public class JvnObjectImpl implements JvnObject {
     public void jvnLockRead()
             throws jvn.JvnException {
         if (lock != LockState.WC && lock != LockState.RC) {
-            state = jvnServer.jvnLockRead(id);
+            try {
+                Registry registry = LocateRegistry.getRegistry(1029);
+                JvnServerImpl jvnServer = (JvnServerImpl) registry.lookup(jvnServerId.toString());
+                state = jvnServer.jvnLockRead(id);
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
         }
 
         if (lock == LockState.WC) {
@@ -40,7 +50,14 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public void jvnLockWrite()
             throws jvn.JvnException {
-        state = jvnServer.jvnLockWrite(id);
+        try {
+            Registry registry = LocateRegistry.getRegistry(1029);
+            JvnServerImpl jvnServer = (JvnServerImpl) registry.lookup(jvnServerId.toString());
+            state = jvnServer.jvnLockWrite(id);
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: " + e.toString());
+            e.printStackTrace();
+        }
         lock = LockState.W;
     }
 
@@ -49,7 +66,7 @@ public class JvnObjectImpl implements JvnObject {
      *
      * @throws JvnException
      **/
-    public void jvnUnLock()
+    public synchronized void jvnUnLock()
             throws jvn.JvnException {
         switch (lock) {
             case R:
@@ -62,7 +79,11 @@ public class JvnObjectImpl implements JvnObject {
                 break;
         }
 
-        notify();
+        try {
+            notify();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -92,7 +113,7 @@ public class JvnObjectImpl implements JvnObject {
      *
      * @throws JvnException
      **/
-    public void jvnInvalidateReader()
+    public synchronized void jvnInvalidateReader()
             throws jvn.JvnException {
         while (lock != LockState.RC) {
             try {
@@ -133,7 +154,7 @@ public class JvnObjectImpl implements JvnObject {
      * @return the current JVN object state
      * @throws JvnException
      **/
-    public Serializable jvnInvalidateWriterForReader()
+    public synchronized Serializable jvnInvalidateWriterForReader()
             throws jvn.JvnException {
         while (lock != LockState.WC || lock != LockState.RWC) {
             try {

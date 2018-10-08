@@ -39,9 +39,8 @@ public class JvnServerImpl
         internalIdLookupTable = new HashMap<>();
         id = UUID.randomUUID();
 
-        Registry registry = LocateRegistry.createRegistry(1029);
-        JvnServerImpl stub = (JvnServerImpl) UnicastRemoteObject.exportObject(this, 0);
-        registry.bind(id.toString(), stub);
+        Registry registry = LocateRegistry.getRegistry(1029);
+        registry.bind(id.toString(), this);
     }
 
     @Override
@@ -79,6 +78,8 @@ public class JvnServerImpl
             try {
                 js = new JvnServerImpl();
             } catch (Exception e) {
+                System.err.println("oops: " + e);
+                e.printStackTrace();
                 return null;
             }
         }
@@ -120,7 +121,7 @@ public class JvnServerImpl
             throw new jvn.JvnException("Error getting object id from JvnCoord");
         }
 
-        JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId, jvnGetServer());
+        JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId, id);
         interceptionObject.jvnLockWrite();
 
         return interceptionObject;
