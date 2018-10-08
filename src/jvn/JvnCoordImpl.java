@@ -113,9 +113,9 @@ public class JvnCoordImpl
         UUID jsId = UUID.fromString(js.toString());
 
         if (jvnObjectLock.containsValue(LockState.W)) {
-            UUID previousWriterJsId = jvnObjectLock.entrySet().iterator().next().getKey();
+            UUID prevWriterJsId = jvnObjectLock.entrySet().iterator().next().getKey();
             js.jvnInvalidateWriterForReader(joi);
-            jvnObjectLock.put(previousWriterJsId, LockState.R);
+            jvnObjectLock.put(prevWriterJsId, LockState.R);
         }
 
         jvnObjectLock.put(jsId, LockState.R);
@@ -138,9 +138,16 @@ public class JvnCoordImpl
         UUID jsId = UUID.fromString(js.toString());
 
         if (jvnObjectLock.containsValue(LockState.W)) {
-            UUID previousWriterJsId = jvnObjectLock.entrySet().iterator().next().getKey();
-            js.jvnInvalidateWriter(joi);
-            jvnObjectLock.put(previousWriterJsId, null);
+            UUID prevWriterJsId = jvnObjectLock.entrySet().iterator().next().getKey();
+            try {
+                Registry registry = LocateRegistry.getRegistry(1029);
+                JvnRemoteServer jvnServer = (JvnRemoteServer) registry.lookup(prevWriterJsId.toString());
+                jvnServer.jvnInvalidateWriter(joi);
+                jvnObjectLock.put(prevWriterJsId, null);
+            } catch (Exception e) {
+                System.err.println("JvnCoord exception: " + e.toString());
+                e.printStackTrace();
+            }
         }
 
         if (jvnObjectLock.containsValue(LockState.R)) {
@@ -157,8 +164,7 @@ public class JvnCoordImpl
                 }
             });
         }
-        
-        jvnObjectLock.entrySet().iterator().next().setValue(LockState.NoLock);
+
         jvnObjectLock.put(jsId, LockState.W);
 
         return store.get(joi);
