@@ -1,20 +1,16 @@
 package jvn;
 
 import java.io.Serializable;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.util.UUID;
 
 public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
-    private UUID jvnServerId;
+    private JvnLocalServer jvnServer = JvnServerImpl.jvnGetServer();
     private LockState lock;
 
-    JvnObjectImpl(Serializable o, int objectId, UUID jsId) throws JvnException {
+    JvnObjectImpl(Serializable o, int objectId) throws JvnException {
         state = o;
         id = objectId;
-        jvnServerId = jsId;
         lock = LockState.NoLock;
     }
 
@@ -26,14 +22,7 @@ public class JvnObjectImpl implements JvnObject {
     public void jvnLockRead()
             throws jvn.JvnException {
         if (lock != LockState.WC && lock != LockState.RC) {
-            try {
-                Registry registry = LocateRegistry.getRegistry(1029);
-                JvnServerImpl jvnServer = (JvnServerImpl) registry.lookup(jvnServerId.toString());
-                state = jvnServer.jvnLockRead(id);
-            } catch (Exception e) {
-                System.err.println("JvnCoord exception: " + e.toString());
-                e.printStackTrace();
-            }
+            state = jvnServer.jvnLockRead(id);
         }
 
         if (lock == LockState.WC) {
@@ -50,14 +39,10 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public void jvnLockWrite()
             throws jvn.JvnException {
-        try {
-            Registry registry = LocateRegistry.getRegistry(1029);
-            JvnServerImpl jvnServer = (JvnServerImpl) registry.lookup(jvnServerId.toString());
-            state = jvnServer.jvnLockWrite(id);
-        } catch (Exception e) {
-            System.err.println("JvnCoord exception: " + e.toString());
-            e.printStackTrace();
-        }
+//            switch
+                // WC: W
+                // RC, NL
+        state = jvnServer.jvnLockWrite(id);
         lock = LockState.W;
     }
 

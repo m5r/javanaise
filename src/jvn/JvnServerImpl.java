@@ -121,7 +121,7 @@ public class JvnServerImpl
             throw new jvn.JvnException("Error getting object id from JvnCoord");
         }
 
-        JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId, id);
+        JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId);
         interceptionObject.jvnLockWrite();
 
         return interceptionObject;
