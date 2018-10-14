@@ -148,8 +148,8 @@ public class JvnServerImpl
         try {
             return jvnGetCoord().jvnLookupObject(jon, jvnGetServer());
         } catch (Exception e) {
-            System.out.printf("Failed to lookup object with name \"%s\" from coordinator, falling back to local cache\n", jon);
-            return store.get(jon);
+            System.out.printf("Failed to lookup object with name \"%s\" from coordinator\n", jon);
+            return null;
         }
     }
 

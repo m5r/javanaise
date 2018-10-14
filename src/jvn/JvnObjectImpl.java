@@ -20,27 +20,21 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnLockRead()
             throws jvn.JvnException {
-        /*if (lock != LockState.WC && lock != LockState.RC) {
-            state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
-        }
-
-        if (lock == LockState.WC) {
-            lock = LockState.RWC;
-        } else {
-            lock = LockState.R;
-        }*/
-
+        System.out.println("object.jvnLockRead");
+        System.out.println("current lock is: " + lock);
         switch (lock) {
             case WC:
                 lock = LockState.RWC;
                 break;
             case RC:
+                lock = LockState.R;
+                break;
             case NL:
+                state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
                 lock = LockState.R;
                 break;
         }
-
-        state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
+        System.out.println("new lock is: " + lock);
     }
 
     /**
@@ -72,6 +66,7 @@ public class JvnObjectImpl implements JvnObject {
                 lock = LockState.RC;
                 break;
             case W:
+            case RWC:
                 lock = LockState.WC;
                 break;
         }
@@ -101,8 +96,6 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnGetObjectState()
             throws jvn.JvnException {
-        System.out.println("state");
-        System.out.println(state);
         return state;
     }
 
@@ -117,6 +110,8 @@ public class JvnObjectImpl implements JvnObject {
         boolean isReading = lock == LockState.R || lock == LockState.RWC;
         boolean isWriting = lock == LockState.W;
         boolean waitingCondition = isReading || isWriting;
+        System.out.println("isReading: " + isReading);
+        System.out.println("isWriting: " + isWriting);
         while (waitingCondition) {
             try {
                 wait();
@@ -124,6 +119,7 @@ public class JvnObjectImpl implements JvnObject {
                 e.printStackTrace();
             }
         }
+        System.out.println("finally invalidate");
         lock = LockState.NL;
     }
 
