@@ -1,7 +1,7 @@
 package jvn;
 
 public enum LockState {
-    NoLock,
+    NL,
     R,
     W,
     RC,

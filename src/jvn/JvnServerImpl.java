@@ -111,7 +111,6 @@ public class JvnServerImpl
         }
 
         JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId);
-        interceptionObject.jvnLockWrite();
 
         return interceptionObject;
     }

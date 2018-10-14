@@ -10,7 +10,7 @@ public class JvnObjectImpl implements JvnObject {
     JvnObjectImpl(Serializable o, int objectId) throws JvnException {
         state = o;
         id = objectId;
-        lock = LockState.NoLock;
+        lock = LockState.W;
     }
 
     /**
@@ -18,9 +18,9 @@ public class JvnObjectImpl implements JvnObject {
      *
      * @throws JvnException
      **/
-    public void jvnLockRead()
+    public synchronized void jvnLockRead()
             throws jvn.JvnException {
-        if (lock != LockState.WC && lock != LockState.RC) {
+        /*if (lock != LockState.WC && lock != LockState.RC) {
             state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
         }
 
@@ -28,7 +28,19 @@ public class JvnObjectImpl implements JvnObject {
             lock = LockState.RWC;
         } else {
             lock = LockState.R;
+        }*/
+
+        switch (lock) {
+            case WC:
+                lock = LockState.RWC;
+                break;
+            case RC:
+            case NL:
+                lock = LockState.R;
+                break;
         }
+
+        state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
     }
 
     /**
@@ -36,12 +48,15 @@ public class JvnObjectImpl implements JvnObject {
      *
      * @throws JvnException
      **/
-    public void jvnLockWrite()
+    public synchronized void jvnLockWrite()
             throws jvn.JvnException {
 //            switch
                 // WC: W
                 // RC, NL
-        state = JvnServerImpl.jvnGetServer().jvnLockWrite(id);
+        if (lock != LockState.WC) {
+            state = JvnServerImpl.jvnGetServer().jvnLockWrite(id);
+        }
+
         lock = LockState.W;
     }
 
@@ -59,8 +74,6 @@ public class JvnObjectImpl implements JvnObject {
             case W:
                 lock = LockState.WC;
                 break;
-            default:
-                break;
         }
 
         try {
@@ -76,7 +89,7 @@ public class JvnObjectImpl implements JvnObject {
      *
      * @throws JvnException
      **/
-    public int jvnGetObjectId()
+    public synchronized int jvnGetObjectId()
             throws jvn.JvnException {
         return id;
     }
@@ -86,8 +99,10 @@ public class JvnObjectImpl implements JvnObject {
      *
      * @throws JvnException
      **/
-    public Serializable jvnGetObjectState()
+    public synchronized Serializable jvnGetObjectState()
             throws jvn.JvnException {
+        System.out.println("state");
+        System.out.println(state);
         return state;
     }
 
@@ -99,16 +114,17 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnInvalidateReader()
             throws jvn.JvnException {
-        while (lock != LockState.RC) {
+        boolean isReading = lock == LockState.R || lock == LockState.RWC;
+        boolean isWriting = lock == LockState.W;
+        boolean waitingCondition = isReading || isWriting;
+        while (waitingCondition) {
             try {
                 wait();
             } catch (Exception e) {
-                System.err.println("JvnCoord exception: " + e.toString());
                 e.printStackTrace();
             }
         }
-
-        lock = LockState.NoLock;
+        lock = LockState.NL;
     }
 
     /**
@@ -119,16 +135,7 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriter()
             throws jvn.JvnException {
-        while (lock != LockState.WC || lock != LockState.RWC) {
-            try {
-                wait();
-            } catch (Exception e) {
-                System.err.println("JvnCoord exception: " + e.toString());
-                e.printStackTrace();
-            }
-        }
-
-        lock = LockState.NoLock;
+        lock = LockState.NL;
         return state;
     }
 
@@ -140,19 +147,14 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriterForReader()
             throws jvn.JvnException {
-        while (lock != LockState.WC || lock != LockState.RWC) {
-            try {
-                wait();
-            } catch (Exception e) {
-                System.err.println("JvnCoord exception: " + e.toString());
-                e.printStackTrace();
-            }
-        }
-
-        if (lock == LockState.RWC) {
-            lock = LockState.R;
-        } else {
-            lock = LockState.RC;
+        switch (lock) {
+            case RWC:
+                lock = LockState.R;
+                break;
+            case W:
+            case WC:
+                lock = LockState.RC;
+                break;
         }
 
         return state;

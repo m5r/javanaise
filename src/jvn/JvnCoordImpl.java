@@ -67,6 +67,9 @@ public class JvnCoordImpl
         try {
             internalIdLookupTable.put(jon, jo.jvnGetObjectId());
             store.put(jo.jvnGetObjectId(), jo);
+            JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jo.jvnGetObjectId());
+            jvnObjectLock.put(js, LockState.W);
+            locks.put(jo.jvnGetObjectId(), jvnObjectLock);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -181,9 +184,41 @@ public class JvnCoordImpl
             registry.bind("JvnCoord", jvnCoord);
 
             System.err.println("Coordinator ready");
+
+            setTimeout(() -> echo((JvnCoordImpl) jvnCoord), 10000);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
         }
+    }
+
+    public HashMap<Integer, JvnObject> getStore() {
+        return store;
+    }
+
+    public HashMap<String, Integer> getInternalIdLookupTable() {
+        return internalIdLookupTable;
+    }
+
+    public HashMap<Integer, JvnObjectLock> getLocks() {
+        return locks;
+    }
+
+    private static void echo(JvnCoordImpl jvnCoord) {
+        System.out.println("state: " + jvnCoord.getStore().entrySet());
+        System.out.println("lookup: " + jvnCoord.getInternalIdLookupTable().entrySet());
+        System.out.println("locks: " + jvnCoord.getLocks().entrySet());
+    }
+
+    public static void setTimeout(Runnable runnable, int delay){
+        new Thread(() -> {
+            try {
+                Thread.sleep(delay);
+                runnable.run();
+            }
+            catch (Exception e){
+                System.err.println(e);
+            }
+        }).start();
     }
 }
