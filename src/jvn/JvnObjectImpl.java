@@ -10,7 +10,7 @@ public class JvnObjectImpl implements JvnObject {
     JvnObjectImpl(Serializable o, int objectId) throws JvnException {
         state = o;
         id = objectId;
-        lock = LockState.W;
+        lock = LockState.NL;
     }
 
     /**
@@ -107,12 +107,7 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnInvalidateReader()
             throws jvn.JvnException {
-        boolean isReading = lock == LockState.R || lock == LockState.RWC;
-        boolean isWriting = lock == LockState.W;
-        boolean waitingCondition = isReading || isWriting;
-        System.out.println("isReading: " + isReading);
-        System.out.println("isWriting: " + isWriting);
-        while (waitingCondition) {
+        while (lock == LockState.R || lock == LockState.RWC) {
             try {
                 wait();
             } catch (Exception e) {
@@ -131,7 +126,14 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriter()
             throws jvn.JvnException {
-        lock = LockState.NL;
+        while (lock == LockState.W) {
+            try {
+                wait();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        lock = LockState.NL; //TODO wait
         return state;
     }
 

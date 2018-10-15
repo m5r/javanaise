@@ -110,9 +110,7 @@ public class JvnServerImpl
             throw new jvn.JvnException("Error getting object id from JvnCoord");
         }
 
-        JvnObjectImpl interceptionObject = new JvnObjectImpl(o, objectId);
-
-        return interceptionObject;
+        return new JvnObjectImpl(o, objectId);
     }
 
     /**
