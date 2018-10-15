@@ -109,20 +109,21 @@ public class JvnCoordImpl
      * @return the current JVN object state
      * @throws java.rmi.RemoteException, JvnException
      **/
-    public synchronized Serializable jvnLockRead(int joi, JvnRemoteServer js)
+    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
 
         if (jvnObjectLock.containsValue(LockState.W)) {
             JvnRemoteServer prevWriterJs = jvnObjectLock.entrySet().iterator().next().getKey();
-            js.jvnInvalidateWriterForReader(joi);
+            Serializable joState = js.jvnInvalidateWriterForReader(joi);
+            store.put(joi, new JvnObjectImpl(joState, joi));
             jvnObjectLock.put(prevWriterJs, LockState.R);
         }
 
         jvnObjectLock.put(js, LockState.R);
 
-        return store.get(joi);
+        return store.get(joi).jvnGetObjectState();
     }
 
     /**
@@ -136,12 +137,15 @@ public class JvnCoordImpl
     public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
+        System.out.println("JvnCoordImpl.jvnLockWrite");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
 
         if (jvnObjectLock.containsValue(LockState.W)) {
+            System.out.println("on a un writer");
             JvnRemoteServer prevWriterJs = jvnObjectLock.entrySet().iterator().next().getKey();
-            prevWriterJs.jvnInvalidateWriter(joi);
-            jvnObjectLock.put(prevWriterJs, null);
+            Serializable joState = prevWriterJs.jvnInvalidateWriter(joi);
+            store.put(joi, new JvnObjectImpl(joState, joi));
+            jvnObjectLock.put(prevWriterJs, LockState.NL);
         }
 
         if (jvnObjectLock.containsValue(LockState.R)) {
@@ -149,7 +153,7 @@ public class JvnCoordImpl
                 try {
                     JvnRemoteServer prevWriterJs = entry.getKey();
                     prevWriterJs.jvnInvalidateReader(joi);
-                    jvnObjectLock.put(prevWriterJs, null);
+                    jvnObjectLock.put(prevWriterJs, LockState.NL);
                 } catch (Exception e) {
                     System.err.println("JvnCoord exception: " + e.toString());
                     e.printStackTrace();
@@ -159,7 +163,7 @@ public class JvnCoordImpl
 
         jvnObjectLock.put(js, LockState.W);
 
-        return store.get(joi);
+        return store.get(joi).jvnGetObjectState();
     }
 
     /**

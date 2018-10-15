@@ -110,7 +110,9 @@ public class JvnServerImpl
             throw new jvn.JvnException("Error getting object id from JvnCoord");
         }
 
-        return new JvnObjectImpl(o, objectId);
+        JvnObjectImpl jo = new JvnObjectImpl(o, objectId);
+        jo.jvnLockWrite();
+        return jo;
     }
 
     /**
@@ -124,7 +126,7 @@ public class JvnServerImpl
             throws jvn.JvnException {
         // to be completed
         try {
-            jvnGetCoord().jvnRegisterObject(jon, jo, (JvnRemoteServer) jvnGetServer());
+            jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
             store.put(jon, jo);
             internalIdLookupTable.put(jo.jvnGetObjectId(), jon);
         } catch (Exception e) {
@@ -213,6 +215,7 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriter(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        System.out.println("JvnServerImpl.jvnInvalidateWriter");
         JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
         jvnObject.jvnInvalidateWriter();
         return jvnObject;

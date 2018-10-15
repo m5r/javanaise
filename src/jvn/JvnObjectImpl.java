@@ -8,6 +8,7 @@ public class JvnObjectImpl implements JvnObject {
     private LockState lock;
 
     JvnObjectImpl(Serializable o, int objectId) throws JvnException {
+        System.out.println("JvnObjectImpl.JvnObjectImpl");
         state = o;
         id = objectId;
         lock = LockState.NL;
@@ -41,13 +42,15 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnLockWrite()
             throws jvn.JvnException {
+        System.out.println("lock: " + lock);
+
         switch (lock) {
             case WC:
                 lock = LockState.W;
                 break;
             case RC:
             case NL:
-                state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
+                state = JvnServerImpl.jvnGetServer().jvnLockWrite(id);
                 lock = LockState.W;
                 break;
         }
@@ -125,13 +128,16 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriter()
             throws jvn.JvnException {
+        System.out.println("JvnObjectImpl.jvnInvalidateWriter");
         while (lock == LockState.W) {
+            System.out.println("wait");
             try {
                 wait();
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        System.out.println("on wait plus");
         lock = LockState.NL; //TODO wait
         return state;
     }
