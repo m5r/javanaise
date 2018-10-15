@@ -5,13 +5,12 @@ import java.io.Serializable;
 public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
-    private LockState lock;
+    transient private LockState lock;
 
     JvnObjectImpl(Serializable o, int objectId) throws JvnException {
         System.out.println("JvnObjectImpl.JvnObjectImpl");
         state = o;
         id = objectId;
-        lock = LockState.NL;
     }
 
     /**
@@ -42,7 +41,9 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnLockWrite()
             throws jvn.JvnException {
-        System.out.println("lock: " + lock);
+        if (this.lock == null) {
+			this.lock = LockState.NL;
+        }
 
         switch (lock) {
             case WC:
@@ -64,6 +65,10 @@ public class JvnObjectImpl implements JvnObject {
     public synchronized void jvnUnLock()
             throws jvn.JvnException {
         switch (lock) {
+            case RC:
+            case WC:
+                lock = LockState.NL;
+                break;
             case R:
                 lock = LockState.RC;
                 break;
@@ -74,7 +79,7 @@ public class JvnObjectImpl implements JvnObject {
         }
 
         try {
-            notify();
+            notifyAll();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -116,8 +121,7 @@ public class JvnObjectImpl implements JvnObject {
                 e.printStackTrace();
             }
         }
-        System.out.println("finally invalidate");
-        lock = LockState.NL;
+        jvnUnLock();
     }
 
     /**
@@ -128,17 +132,14 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriter()
             throws jvn.JvnException {
-        System.out.println("JvnObjectImpl.jvnInvalidateWriter");
         while (lock == LockState.W) {
-            System.out.println("wait");
             try {
                 wait();
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("on wait plus");
-        lock = LockState.NL; //TODO wait
+        jvnUnLock();
         return state;
     }
 
@@ -150,15 +151,14 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriterForReader()
             throws jvn.JvnException {
-        switch (lock) {
-            case RWC:
-                lock = LockState.R;
-                break;
-            case W:
-            case WC:
-                lock = LockState.RC;
-                break;
+        while (lock == LockState.W) {
+            try {
+                wait();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+        jvnUnLock();
 
         return state;
     }

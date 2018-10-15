@@ -20,10 +20,10 @@ public class JvnServerImpl
         implements JvnLocalServer, JvnRemoteServer {
 
     // A JVN server is managed as a singleton
-    private static JvnServerImpl js = null;
+    private static JvnServerImpl jvnServer = null;
     private static JvnRemoteCoord jvnCoord = null;
-    private HashMap<String, JvnObject> store;
-    private HashMap<Integer, String> internalIdLookupTable;
+    private HashMap<String, JvnObject> jvnObjects;
+    private HashMap<Integer, String> jvnObjectNames; // TODO: Remove this property
 
     /**
      * Default constructor
@@ -33,8 +33,8 @@ public class JvnServerImpl
     private JvnServerImpl() throws Exception {
         super();
         // to be completed
-        store = new HashMap<>();
-        internalIdLookupTable = new HashMap<>();
+        jvnObjects = new HashMap<>();
+        jvnObjectNames = new HashMap<>();
     }
 
     /**
@@ -63,16 +63,16 @@ public class JvnServerImpl
      * @throws JvnException
      **/
     public static JvnServerImpl jvnGetServer() {
-        if (js == null) {
+        if (jvnServer == null) {
             try {
-                js = new JvnServerImpl();
+                jvnServer = new JvnServerImpl();
             } catch (Exception e) {
                 System.err.println("oops: " + e);
                 e.printStackTrace();
                 return null;
             }
         }
-        return js;
+        return jvnServer;
     }
 
     /**
@@ -100,19 +100,14 @@ public class JvnServerImpl
     public JvnObject jvnCreateObject(Serializable o)
             throws jvn.JvnException {
         // to be completed
-        int objectId;
         try {
-            objectId = jvnGetCoord().jvnGetObjectId();
+            return new JvnObjectImpl(o, jvnGetCoord().jvnGetObjectId());
         } catch (Exception e) {
             System.err.println("JvnCoord exception: int" + e.toString());
             e.printStackTrace();
 
-            throw new jvn.JvnException("Error getting object id from JvnCoord");
+            throw new jvn.JvnException("JvnServerImpl.jvnCreateObject error: " + e.getMessage());
         }
-
-        JvnObjectImpl jo = new JvnObjectImpl(o, objectId);
-        jo.jvnLockWrite();
-        return jo;
     }
 
     /**
@@ -127,8 +122,8 @@ public class JvnServerImpl
         // to be completed
         try {
             jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
-            store.put(jon, jo);
-            internalIdLookupTable.put(jo.jvnGetObjectId(), jon);
+            jvnObjects.put(jon, jo);
+            jvnObjectNames.put(jo.jvnGetObjectId(), jon);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -146,7 +141,14 @@ public class JvnServerImpl
             throws jvn.JvnException {
         // to be completed
         try {
-            return jvnGetCoord().jvnLookupObject(jon, jvnGetServer());
+            JvnObject jvnObject = jvnGetCoord().jvnLookupObject(jon, jvnGetServer());
+
+            if (jvnObject != null) {
+                jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
+                jvnObjectNames.put(jvnObject.jvnGetObjectId(), jon);
+            }
+
+            return jvnObject;
         } catch (Exception e) {
             System.out.printf("Failed to lookup object with name \"%s\" from coordinator\n", jon);
             return null;
@@ -201,7 +203,12 @@ public class JvnServerImpl
     public void jvnInvalidateReader(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
+        JvnObject jvnObject = jvnObjects.get(jvnObjectNames.get(joi));
+
+        if (jvnObject == null) {
+            throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
+        }
+
         jvnObject.jvnInvalidateReader();
     }
 
@@ -215,10 +222,13 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriter(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        System.out.println("JvnServerImpl.jvnInvalidateWriter");
-        JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
-        jvnObject.jvnInvalidateWriter();
-        return jvnObject;
+        JvnObject jvnObject = jvnObjects.get(jvnObjectNames.get(joi));
+
+        if (jvnObject == null) {
+            throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
+        }
+
+        return jvnObject.jvnInvalidateWriter();
     }
 
     /**
@@ -231,9 +241,13 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriterForReader(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = store.get(internalIdLookupTable.get(joi));
-        jvnObject.jvnInvalidateWriterForReader();
-        return jvnObject;
+        JvnObject jvnObject = jvnObjects.get(jvnObjectNames.get(joi));
+
+        if (jvnObject == null) {
+            throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
+        }
+
+        return jvnObject.jvnInvalidateWriterForReader();
     }
 
 }
