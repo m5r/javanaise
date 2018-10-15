@@ -92,14 +92,14 @@ public class JvnServerImpl
     /**
      * creation of a JVN object
      *
-     * @param o : the JVN object state
+     * @param jvnObjectState : the JVN object state
      * @throws JvnException
      **/
-    public JvnObject jvnCreateObject(Serializable o)
+    public JvnObject jvnCreateObject(Serializable jvnObjectState)
             throws jvn.JvnException {
         // to be completed
         try {
-            return new JvnObjectImpl(o, jvnGetCoord().jvnGetObjectId());
+            return new JvnObjectImpl(jvnObjectState, jvnGetCoord().jvnGetObjectId());
         } catch (Exception e) {
             System.err.println("JvnCoord exception: int" + e.toString());
             e.printStackTrace();
@@ -111,16 +111,16 @@ public class JvnServerImpl
     /**
      * Associate a symbolic name with a JVN object
      *
-     * @param jon : the JVN object name
-     * @param jo  : the JVN object
+     * @param jvnObjectName : the JVN object name
+     * @param jvnObject  : the JVN object
      * @throws JvnException
      **/
-    public void jvnRegisterObject(String jon, JvnObject jo)
+    public void jvnRegisterObject(String jvnObjectName, JvnObject jvnObject)
             throws jvn.JvnException {
         // to be completed
         try {
-            jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
-            jvnObjects.put(jo.jvnGetObjectId(), jo);
+            jvnGetCoord().jvnRegisterObject(jvnObjectName, jvnObject, jvnGetServer());
+            jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -130,15 +130,15 @@ public class JvnServerImpl
     /**
      * Provide the reference of a JVN object beeing given its symbolic name
      *
-     * @param jon : the JVN object name
+     * @param jvnObjectName : the JVN object name
      * @return the JVN object
      * @throws JvnException
      **/
-    public JvnObject jvnLookupObject(String jon)
+    public JvnObject jvnLookupObject(String jvnObjectName)
             throws jvn.JvnException {
         // to be completed
         try {
-            JvnObject jvnObject = jvnGetCoord().jvnLookupObject(jon, jvnGetServer());
+            JvnObject jvnObject = jvnGetCoord().jvnLookupObject(jvnObjectName, jvnGetServer());
 
             if (jvnObject != null) {
                 jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
@@ -146,7 +146,7 @@ public class JvnServerImpl
 
             return jvnObject;
         } catch (Exception e) {
-            System.out.printf("Failed to lookup object with name \"%s\" from coordinator\n", jon);
+            System.out.printf("Failed to lookup object with name \"%s\" from coordinator\n", jvnObjectName);
             return null;
         }
     }
@@ -154,17 +154,17 @@ public class JvnServerImpl
     /**
      * Get a Read lock on a JVN object
      *
-     * @param joi : the JVN object identification
+     * @param jvnObjectId : the JVN object identification
      * @return the current JVN object state
      * @throws JvnException
      **/
-    public Serializable jvnLockRead(int joi)
+    public Serializable jvnLockRead(int jvnObjectId)
             throws JvnException {
         // to be completed
         try {
-            return jvnGetCoord().jvnLockRead(joi, jvnGetServer());
+            return jvnGetCoord().jvnLockRead(jvnObjectId, jvnGetServer());
         } catch (Exception e) {
-            System.out.printf("Failed to get a read lock for object with id \"%d\" from coordinator\n", joi);
+            System.out.printf("Failed to get a read lock for object with id \"%d\" from coordinator\n", jvnObjectId);
             return null;
         }
     }
@@ -172,17 +172,17 @@ public class JvnServerImpl
     /**
      * Get a Write lock on a JVN object
      *
-     * @param joi : the JVN object identification
+     * @param jvnObjectId : the JVN object identification
      * @return the current JVN object state
      * @throws JvnException
      **/
-    public Serializable jvnLockWrite(int joi)
+    public Serializable jvnLockWrite(int jvnObjectId)
             throws JvnException {
         // to be completed
         try {
-            return jvnGetCoord().jvnLockWrite(joi, jvnGetServer());
+            return jvnGetCoord().jvnLockWrite(jvnObjectId, jvnGetServer());
         } catch (Exception e) {
-            System.out.printf("Failed to get a write lock for object with id \"%d\" from coordinator\n", joi);
+            System.out.printf("Failed to get a write lock for object with id \"%d\" from coordinator\n", jvnObjectId);
             return null;
         }
     }
@@ -192,17 +192,17 @@ public class JvnServerImpl
      * Invalidate the Read lock of the JVN object identified by id
      * called by the JvnCoord
      *
-     * @param joi : the JVN object id
+     * @param jvnObjectId : the JVN object id
      * @return void
      * @throws java.rmi.RemoteException,JvnException
      **/
-    public void jvnInvalidateReader(int joi)
+    public void jvnInvalidateReader(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = jvnObjects.get(joi);
+        JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
-            throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
+            throw new JvnException("Failed to find jvnObject with id \"" + jvnObjectId + "\"on local server");
         }
 
         jvnObject.jvnInvalidateReader();
@@ -211,17 +211,17 @@ public class JvnServerImpl
     /**
      * Invalidate the Write lock of the JVN object identified by id
      *
-     * @param joi : the JVN object id
+     * @param jvnObjectId : the JVN object id
      * @return the current JVN object state
      * @throws java.rmi.RemoteException,JvnException
      **/
-    public Serializable jvnInvalidateWriter(int joi)
+    public Serializable jvnInvalidateWriter(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = jvnObjects.get(joi);
+        JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
-            throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
+            throw new JvnException("Failed to find jvnObject with id \"" + jvnObjectId + "\"on local server");
         }
 
         return jvnObject.jvnInvalidateWriter();
@@ -230,17 +230,17 @@ public class JvnServerImpl
     /**
      * Reduce the Write lock of the JVN object identified by id
      *
-     * @param joi : the JVN object id
+     * @param jvnObjectId : the JVN object id
      * @return the current JVN object state
      * @throws java.rmi.RemoteException,JvnException
      **/
-    public Serializable jvnInvalidateWriterForReader(int joi)
+    public Serializable jvnInvalidateWriterForReader(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = jvnObjects.get(joi);
+        JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
-            throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
+            throw new JvnException("Failed to find jvnObject with id \"" + jvnObjectId + "\"on local server");
         }
 
         return jvnObject.jvnInvalidateWriterForReader();
