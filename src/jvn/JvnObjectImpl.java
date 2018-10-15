@@ -7,9 +7,9 @@ public class JvnObjectImpl implements JvnObject {
     private int id;
     transient private LockState lock;
 
-    JvnObjectImpl(Serializable o, int objectId) throws JvnException {
+    JvnObjectImpl(Serializable jvnObjectState, int objectId) throws JvnException {
         System.out.println("JvnObjectImpl.JvnObjectImpl");
-        state = o;
+        state = jvnObjectState;
         id = objectId;
     }
 
@@ -42,7 +42,7 @@ public class JvnObjectImpl implements JvnObject {
     public synchronized void jvnLockWrite()
             throws jvn.JvnException {
         if (this.lock == null) {
-			this.lock = LockState.NL;
+            this.lock = LockState.NL;
         }
 
         switch (lock) {
@@ -140,6 +140,7 @@ public class JvnObjectImpl implements JvnObject {
             }
         }
         jvnUnLock();
+
         return state;
     }
 

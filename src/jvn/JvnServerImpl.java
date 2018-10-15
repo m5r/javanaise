@@ -112,7 +112,7 @@ public class JvnServerImpl
      * Associate a symbolic name with a JVN object
      *
      * @param jvnObjectName : the JVN object name
-     * @param jvnObject  : the JVN object
+     * @param jvnObject     : the JVN object
      * @throws JvnException
      **/
     public void jvnRegisterObject(String jvnObjectName, JvnObject jvnObject)

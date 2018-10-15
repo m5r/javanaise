@@ -51,25 +51,24 @@ public class JvnCoordImpl
     /**
      * Associate a symbolic name with a JVN object
      *
-     * @param jon : the JVN object name
-     * @param jo  : the JVN object
-     *            //     * @param joi : the JVN object identification
-     *            //     * @param js  : the remote reference of the JVNServer
+     * @param jvnObjectName   : the JVN object name
+     * @param jvnObject       : the JVN object
+     * @param jvnRemoteServer : the remote reference of the JVNServer
      * @throws java.rmi.RemoteException,JvnException
      **/
-    public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
+    public void jvnRegisterObject(String jvnObjectName, JvnObject jvnObject, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        if (internalIdLookupTable.get(jon) != null) {
-            throw new jvn.JvnException(String.format("Object with name %s already registered", jon));
+        if (internalIdLookupTable.get(jvnObjectName) != null) {
+            throw new jvn.JvnException(String.format("Object with name %s already registered", jvnObjectName));
         }
 
         try {
-            internalIdLookupTable.put(jon, jo.jvnGetObjectId());
-            store.put(jo.jvnGetObjectId(), jo);
-            JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jo.jvnGetObjectId());
-            jvnObjectLock.put(js, LockState.W);
-            locks.put(jo.jvnGetObjectId(), jvnObjectLock);
+            internalIdLookupTable.put(jvnObjectName, jvnObject.jvnGetObjectId());
+            store.put(jvnObject.jvnGetObjectId(), jvnObject);
+            JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObject.jvnGetObjectId());
+            jvnObjectLock.put(jvnRemoteServer, LockState.W);
+            locks.put(jvnObject.jvnGetObjectId(), jvnObjectLock);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -79,14 +78,14 @@ public class JvnCoordImpl
     /**
      * Get the reference of a JVN object managed by a given JVN server
      *
-     * @param jon : the JVN object name
-     * @param js  : the remote reference of the JVNServer
+     * @param jvnObjectName   : the JVN object name
+     * @param jvnRemoteServer : the remote reference of the JVNServer
      * @throws java.rmi.RemoteException,JvnException
      **/
-    public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
+    public JvnObject jvnLookupObject(String jvnObjectName, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        int joi = internalIdLookupTable.get(jon);
+        int joi = internalIdLookupTable.get(jvnObjectName);
         return store.get(joi);
     }
 
@@ -104,47 +103,47 @@ public class JvnCoordImpl
     /**
      * Get a Read lock on a JVN object managed by a given JVN server
      *
-     * @param joi : the JVN object identification
-     * @param js  : the remote reference of the server
+     * @param jvnObjectId     : the JVN object identification
+     * @param jvnRemoteServer : the remote reference of the server
      * @return the current JVN object state
      * @throws java.rmi.RemoteException, JvnException
      **/
-    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
+    public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
-        JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
+        JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
 
         if (jvnObjectLock.containsValue(LockState.W)) {
             JvnRemoteServer prevWriterJs = jvnObjectLock.entrySet().iterator().next().getKey();
-            Serializable joState = js.jvnInvalidateWriterForReader(joi);
-            store.put(joi, new JvnObjectImpl(joState, joi));
+            Serializable joState = jvnRemoteServer.jvnInvalidateWriterForReader(jvnObjectId);
+            store.put(jvnObjectId, new JvnObjectImpl(joState, jvnObjectId));
             jvnObjectLock.put(prevWriterJs, LockState.R);
         }
 
-        jvnObjectLock.put(js, LockState.R);
+        jvnObjectLock.put(jvnRemoteServer, LockState.R);
 
-        return store.get(joi).jvnGetObjectState();
+        return store.get(jvnObjectId).jvnGetObjectState();
     }
 
     /**
      * Get a Write lock on a JVN object managed by a given JVN server
      *
-     * @param joi : the JVN object identification
-     * @param js  : the remote reference of the server
+     * @param jvnObjectId     : the JVN object identification
+     * @param jvnRemoteServer : the remote reference of the server
      * @return the current JVN object state
      * @throws java.rmi.RemoteException, JvnException
      **/
-    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
+    public Serializable jvnLockWrite(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
         System.out.println("JvnCoordImpl.jvnLockWrite");
-        JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(joi);
+        JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
 
         if (jvnObjectLock.containsValue(LockState.W)) {
             System.out.println("on a un writer");
             JvnRemoteServer prevWriterJs = jvnObjectLock.entrySet().iterator().next().getKey();
-            Serializable joState = prevWriterJs.jvnInvalidateWriter(joi);
-            store.put(joi, new JvnObjectImpl(joState, joi));
+            Serializable joState = prevWriterJs.jvnInvalidateWriter(jvnObjectId);
+            store.put(jvnObjectId, new JvnObjectImpl(joState, jvnObjectId));
             jvnObjectLock.put(prevWriterJs, LockState.NL);
         }
 
@@ -152,7 +151,7 @@ public class JvnCoordImpl
             jvnObjectLock.entrySet().stream().forEach(entry -> {
                 try {
                     JvnRemoteServer prevWriterJs = entry.getKey();
-                    prevWriterJs.jvnInvalidateReader(joi);
+                    prevWriterJs.jvnInvalidateReader(jvnObjectId);
                     jvnObjectLock.put(prevWriterJs, LockState.NL);
                 } catch (Exception e) {
                     System.err.println("JvnCoord exception: " + e.toString());
@@ -161,23 +160,23 @@ public class JvnCoordImpl
             });
         }
 
-        jvnObjectLock.put(js, LockState.W);
+        jvnObjectLock.put(jvnRemoteServer, LockState.W);
 
-        return store.get(joi).jvnGetObjectState();
+        return store.get(jvnObjectId).jvnGetObjectState();
     }
 
     /**
      * A JVN server terminates
      *
-     * @param js : the remote reference of the server
+     * @param jvnRemoteServer : the remote reference of the server
      * @throws java.rmi.RemoteException, JvnException
      **/
-    public void jvnTerminate(JvnRemoteServer js)
+    public void jvnTerminate(JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
         locks.entrySet()
                 .stream()
-                .filter(entry -> entry.getValue().containsKey(js))
+                .filter(entry -> entry.getValue().containsKey(jvnRemoteServer))
                 .forEach(entry -> entry.setValue(null));
     }
 
@@ -214,13 +213,12 @@ public class JvnCoordImpl
         System.out.println("locks: " + jvnCoord.getLocks().entrySet());
     }
 
-    public static void setTimeout(Runnable runnable, int delay){
+    public static void setTimeout(Runnable runnable, int delay) {
         new Thread(() -> {
             try {
                 Thread.sleep(delay);
                 runnable.run();
-            }
-            catch (Exception e){
+            } catch (Exception e) {
                 System.err.println(e);
             }
         }).start();
