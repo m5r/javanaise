@@ -20,8 +20,6 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnLockRead()
             throws jvn.JvnException {
-        System.out.println("object.jvnLockRead");
-        System.out.println("current lock is: " + lock);
         switch (lock) {
             case WC:
                 lock = LockState.RWC;
@@ -34,7 +32,6 @@ public class JvnObjectImpl implements JvnObject {
                 lock = LockState.R;
                 break;
         }
-        System.out.println("new lock is: " + lock);
     }
 
     /**
@@ -44,14 +41,16 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnLockWrite()
             throws jvn.JvnException {
-//            switch
-                // WC: W
-                // RC, NL
-        if (lock != LockState.WC) {
-            state = JvnServerImpl.jvnGetServer().jvnLockWrite(id);
+        switch (lock) {
+            case WC:
+                lock = LockState.W;
+                break;
+            case RC:
+            case NL:
+                state = JvnServerImpl.jvnGetServer().jvnLockRead(id);
+                lock = LockState.W;
+                break;
         }
-
-        lock = LockState.W;
     }
 
     /**
