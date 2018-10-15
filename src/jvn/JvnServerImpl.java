@@ -22,8 +22,7 @@ public class JvnServerImpl
     // A JVN server is managed as a singleton
     private static JvnServerImpl jvnServer = null;
     private static JvnRemoteCoord jvnCoord = null;
-    private HashMap<String, JvnObject> jvnObjects;
-    private HashMap<Integer, String> jvnObjectNames; // TODO: Remove this property
+    private HashMap<Integer, JvnObject> jvnObjects;
 
     /**
      * Default constructor
@@ -34,7 +33,6 @@ public class JvnServerImpl
         super();
         // to be completed
         jvnObjects = new HashMap<>();
-        jvnObjectNames = new HashMap<>();
     }
 
     /**
@@ -122,8 +120,7 @@ public class JvnServerImpl
         // to be completed
         try {
             jvnGetCoord().jvnRegisterObject(jon, jo, jvnGetServer());
-            jvnObjects.put(jon, jo);
-            jvnObjectNames.put(jo.jvnGetObjectId(), jon);
+            jvnObjects.put(jo.jvnGetObjectId(), jo);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -145,7 +142,6 @@ public class JvnServerImpl
 
             if (jvnObject != null) {
                 jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
-                jvnObjectNames.put(jvnObject.jvnGetObjectId(), jon);
             }
 
             return jvnObject;
@@ -203,7 +199,7 @@ public class JvnServerImpl
     public void jvnInvalidateReader(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = jvnObjects.get(jvnObjectNames.get(joi));
+        JvnObject jvnObject = jvnObjects.get(joi);
 
         if (jvnObject == null) {
             throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
@@ -222,7 +218,7 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriter(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = jvnObjects.get(jvnObjectNames.get(joi));
+        JvnObject jvnObject = jvnObjects.get(joi);
 
         if (jvnObject == null) {
             throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
@@ -241,7 +237,7 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriterForReader(int joi)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        JvnObject jvnObject = jvnObjects.get(jvnObjectNames.get(joi));
+        JvnObject jvnObject = jvnObjects.get(joi);
 
         if (jvnObject == null) {
             throw new JvnException("Failed to find jvnObject with id \"" + joi + "\"on local server");
