@@ -23,6 +23,7 @@ public class JvnServerImpl
     private static JvnServerImpl jvnServer = null;
     private static JvnRemoteCoord jvnCoord = null;
     private HashMap<Integer, JvnObject> jvnObjects;
+    private HashMap<String, Integer> internalIdLookupTable;
 
     /**
      * Default constructor
@@ -33,6 +34,7 @@ public class JvnServerImpl
         super();
         // to be completed
         jvnObjects = new HashMap<>();
+        internalIdLookupTable = new HashMap<>();
     }
 
     /**
@@ -41,7 +43,7 @@ public class JvnServerImpl
      *
      * @throws JvnException
      **/
-    public static JvnRemoteCoord jvnGetCoord() {
+    private static JvnRemoteCoord jvnGetCoord() {
         if (jvnCoord == null) {
             try {
                 Registry registry = LocateRegistry.getRegistry(1029);
@@ -121,6 +123,7 @@ public class JvnServerImpl
         try {
             jvnGetCoord().jvnRegisterObject(jvnObjectName, jvnObject, jvnGetServer());
             jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
+            internalIdLookupTable.put(jvnObjectName, jvnObject.jvnGetObjectId());
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -137,6 +140,12 @@ public class JvnServerImpl
     public JvnObject jvnLookupObject(String jvnObjectName)
             throws jvn.JvnException {
         // to be completed
+        Integer localJvnObjectId = internalIdLookupTable.get(jvnObjectName);
+        if (localJvnObjectId != null) {
+            JvnObject localJvnObject = jvnObjects.get(localJvnObjectId);
+            // TODO: return the object ???
+        }
+
         try {
             JvnObject jvnObject = jvnGetCoord().jvnLookupObject(jvnObjectName, jvnGetServer());
 

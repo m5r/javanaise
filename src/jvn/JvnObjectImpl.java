@@ -11,6 +11,7 @@ public class JvnObjectImpl implements JvnObject {
         System.out.println("JvnObjectImpl.JvnObjectImpl");
         state = jvnObjectState;
         id = objectId;
+        lock = LockState.NL;
     }
 
     /**
@@ -21,9 +22,11 @@ public class JvnObjectImpl implements JvnObject {
     public synchronized void jvnLockRead()
             throws jvn.JvnException {
         switch (lock) {
+            case W:
             case WC:
                 lock = LockState.RWC;
                 break;
+            case R:
             case RC:
                 lock = LockState.R;
                 break;
@@ -46,9 +49,12 @@ public class JvnObjectImpl implements JvnObject {
         }
 
         switch (lock) {
+            case W:
             case WC:
+            case RWC:
                 lock = LockState.W;
                 break;
+            case R:
             case RC:
             case NL:
                 state = JvnServerImpl.jvnGetServer().jvnLockWrite(id);
@@ -78,11 +84,7 @@ public class JvnObjectImpl implements JvnObject {
                 break;
         }
 
-        try {
-            notifyAll();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        notifyAll();
     }
 
 
@@ -121,7 +123,8 @@ public class JvnObjectImpl implements JvnObject {
                 e.printStackTrace();
             }
         }
-        jvnUnLock();
+
+        lock = LockState.NL;
     }
 
     /**
@@ -139,7 +142,8 @@ public class JvnObjectImpl implements JvnObject {
                 e.printStackTrace();
             }
         }
-        jvnUnLock();
+
+        lock = LockState.NL;
 
         return state;
     }
@@ -159,7 +163,8 @@ public class JvnObjectImpl implements JvnObject {
                 e.printStackTrace();
             }
         }
-        jvnUnLock();
+
+        lock = LockState.RC;
 
         return state;
     }

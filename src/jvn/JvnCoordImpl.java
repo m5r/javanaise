@@ -19,8 +19,8 @@ public class JvnCoordImpl
         implements JvnRemoteCoord {
 
     private HashMap<String, Integer> internalIdLookupTable;
-    private HashMap<Integer, JvnObject> store;
-    private HashMap<Integer, JvnObjectLock> locks;
+    private HashMap<Integer, JvnObject> jvnObjects;
+    private HashMap<Integer, JvnObjectLock> jvnObjectLocks;
     private int objectCount;
 
     /**
@@ -31,8 +31,8 @@ public class JvnCoordImpl
     private JvnCoordImpl() throws Exception {
         // to be completed
         internalIdLookupTable = new HashMap<>();
-        store = new HashMap<>();
-        locks = new HashMap<>();
+        jvnObjects = new HashMap<>();
+        jvnObjectLocks = new HashMap<>();
         objectCount = 0;
     }
 
@@ -65,10 +65,10 @@ public class JvnCoordImpl
 
         try {
             internalIdLookupTable.put(jvnObjectName, jvnObject.jvnGetObjectId());
-            store.put(jvnObject.jvnGetObjectId(), jvnObject);
+            jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
             JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObject.jvnGetObjectId());
             jvnObjectLock.put(jvnRemoteServer, LockState.W);
-            locks.put(jvnObject.jvnGetObjectId(), jvnObjectLock);
+            jvnObjectLocks.put(jvnObject.jvnGetObjectId(), jvnObjectLock);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -85,16 +85,17 @@ public class JvnCoordImpl
     public JvnObject jvnLookupObject(String jvnObjectName, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        int joi = internalIdLookupTable.get(jvnObjectName);
-        return store.get(joi);
+        int jvnObjectId = internalIdLookupTable.get(jvnObjectName);
+        jvnLockRead(jvnObjectId, jvnRemoteServer);
+        return jvnObjects.get(jvnObjectId);
     }
 
     private JvnObjectLock getJvnObjectLockFromId(int joi) {
-        JvnObjectLock jvnObjectLock = locks.get(joi);
+        JvnObjectLock jvnObjectLock = jvnObjectLocks.get(joi);
 
         if (jvnObjectLock == null) {
             jvnObjectLock = new JvnObjectLock();
-            locks.put(joi, jvnObjectLock);
+            jvnObjectLocks.put(joi, jvnObjectLock);
         }
 
         return jvnObjectLock;
@@ -113,16 +114,19 @@ public class JvnCoordImpl
         // to be completed
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
 
+        System.out.println("server has write lock: " + (jvnObjectLock.get(jvnRemoteServer) == LockState.W));
+
         if (jvnObjectLock.containsValue(LockState.W)) {
-            JvnRemoteServer prevWriterJs = jvnObjectLock.entrySet().iterator().next().getKey();
-            Serializable joState = jvnRemoteServer.jvnInvalidateWriterForReader(jvnObjectId);
-            store.put(jvnObjectId, new JvnObjectImpl(joState, jvnObjectId));
-            jvnObjectLock.put(prevWriterJs, LockState.R);
+            JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().iterator().next().getKey();
+            System.out.println("server really has write lock: " + (jvnRemoteServer == prevWriterJvnServer));
+            Serializable jvnObjectState = jvnRemoteServer.jvnInvalidateWriterForReader(jvnObjectId);
+            jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
+            jvnObjectLock.put(prevWriterJvnServer, LockState.R);
         }
 
         jvnObjectLock.put(jvnRemoteServer, LockState.R);
 
-        return store.get(jvnObjectId).jvnGetObjectState();
+        return jvnObjects.get(jvnObjectId).jvnGetObjectState();
     }
 
     /**
@@ -141,18 +145,18 @@ public class JvnCoordImpl
 
         if (jvnObjectLock.containsValue(LockState.W)) {
             System.out.println("on a un writer");
-            JvnRemoteServer prevWriterJs = jvnObjectLock.entrySet().iterator().next().getKey();
-            Serializable joState = prevWriterJs.jvnInvalidateWriter(jvnObjectId);
-            store.put(jvnObjectId, new JvnObjectImpl(joState, jvnObjectId));
-            jvnObjectLock.put(prevWriterJs, LockState.NL);
+            JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().iterator().next().getKey();
+            Serializable joState = prevWriterJvnServer.jvnInvalidateWriter(jvnObjectId);
+            jvnObjects.put(jvnObjectId, new JvnObjectImpl(joState, jvnObjectId));
+            jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
         }
 
         if (jvnObjectLock.containsValue(LockState.R)) {
             jvnObjectLock.entrySet().stream().forEach(entry -> {
                 try {
-                    JvnRemoteServer prevWriterJs = entry.getKey();
-                    prevWriterJs.jvnInvalidateReader(jvnObjectId);
-                    jvnObjectLock.put(prevWriterJs, LockState.NL);
+                    JvnRemoteServer prevWriterJvnServer = entry.getKey();
+                    prevWriterJvnServer.jvnInvalidateReader(jvnObjectId);
+                    jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
                 } catch (Exception e) {
                     System.err.println("JvnCoord exception: " + e.toString());
                     e.printStackTrace();
@@ -162,7 +166,7 @@ public class JvnCoordImpl
 
         jvnObjectLock.put(jvnRemoteServer, LockState.W);
 
-        return store.get(jvnObjectId).jvnGetObjectState();
+        return jvnObjects.get(jvnObjectId).jvnGetObjectState();
     }
 
     /**
@@ -174,7 +178,7 @@ public class JvnCoordImpl
     public void jvnTerminate(JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
-        locks.entrySet()
+        jvnObjectLocks.entrySet()
                 .stream()
                 .filter(entry -> entry.getValue().containsKey(jvnRemoteServer))
                 .forEach(entry -> entry.setValue(null));
@@ -195,22 +199,22 @@ public class JvnCoordImpl
         }
     }
 
-    public HashMap<Integer, JvnObject> getStore() {
-        return store;
+    public HashMap<Integer, JvnObject> getJvnObjects() {
+        return jvnObjects;
     }
 
     public HashMap<String, Integer> getInternalIdLookupTable() {
         return internalIdLookupTable;
     }
 
-    public HashMap<Integer, JvnObjectLock> getLocks() {
-        return locks;
+    public HashMap<Integer, JvnObjectLock> getJvnObjectLocks() {
+        return jvnObjectLocks;
     }
 
     private static void echo(JvnCoordImpl jvnCoord) {
-        System.out.println("state: " + jvnCoord.getStore().entrySet());
+        System.out.println("state: " + jvnCoord.getJvnObjects().entrySet());
         System.out.println("lookup: " + jvnCoord.getInternalIdLookupTable().entrySet());
-        System.out.println("locks: " + jvnCoord.getLocks().entrySet());
+        System.out.println("jvnObjectLocks: " + jvnCoord.getJvnObjectLocks().entrySet());
     }
 
     public static void setTimeout(Runnable runnable, int delay) {
