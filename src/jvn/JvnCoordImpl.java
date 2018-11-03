@@ -85,7 +85,9 @@ public class JvnCoordImpl
     public JvnObject jvnLookupObject(String jvnObjectName, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        System.out.println("JvnCoordImpl.jvnLookupObject");
         int jvnObjectId = internalIdLookupTable.get(jvnObjectName);
+        System.out.println("    jvnObjectId: " + jvnObjectId);
         jvnLockRead(jvnObjectId, jvnRemoteServer);
         return jvnObjects.get(jvnObjectId);
     }
@@ -112,19 +114,24 @@ public class JvnCoordImpl
     public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
+        System.out.println("JvnCoordImpl.jvnLockRead");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
 
-        System.out.println("server has write lock: " + (jvnObjectLock.get(jvnRemoteServer) == LockState.W));
+        boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
+        System.out.println("    requesterHasWriteLock: " + requesterHasWriteLock);
 
-        if (jvnObjectLock.containsValue(LockState.W)) {
-            JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().iterator().next().getKey();
-            System.out.println("server really has write lock: " + (jvnRemoteServer == prevWriterJvnServer));
-            Serializable jvnObjectState = jvnRemoteServer.jvnInvalidateWriterForReader(jvnObjectId);
-            jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
-            jvnObjectLock.put(prevWriterJvnServer, LockState.R);
+        if (!requesterHasWriteLock) {
+            if (jvnObjectLock.containsValue(LockState.W)) {
+                System.out.println("    write lock found but this isnt lock of requester");
+                JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.W).iterator().next().getKey();
+                System.out.println("prevWriterJvnServerLock: " + jvnObjectLock.get(prevWriterJvnServer));
+                Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriterForReader(jvnObjectId);
+                jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
+                jvnObjectLock.put(prevWriterJvnServer, LockState.R);
+            }
+
+            jvnObjectLock.put(jvnRemoteServer, LockState.R);
         }
-
-        jvnObjectLock.put(jvnRemoteServer, LockState.R);
 
         return jvnObjects.get(jvnObjectId).jvnGetObjectState();
     }
@@ -142,21 +149,31 @@ public class JvnCoordImpl
         // to be completed
         System.out.println("JvnCoordImpl.jvnLockWrite");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
+        boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
+        System.out.println("    requesterHasWriteLock: " + requesterHasWriteLock);
+        System.out.println("    jvnObjectLock.get(jvnRemoteServer): " + jvnObjectLock.get(jvnRemoteServer));
 
-        if (jvnObjectLock.containsValue(LockState.W)) {
-            System.out.println("on a un writer");
-            JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().iterator().next().getKey();
-            Serializable joState = prevWriterJvnServer.jvnInvalidateWriter(jvnObjectId);
-            jvnObjects.put(jvnObjectId, new JvnObjectImpl(joState, jvnObjectId));
+        if (jvnObjectLock.containsValue(LockState.W) && !requesterHasWriteLock) {
+            System.out.println("    write lock found but this isnt lock of requester");
+            JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.W).iterator().next().getKey();
+            Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriter(jvnObjectId);
             jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
+            jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
         }
 
         if (jvnObjectLock.containsValue(LockState.R)) {
-            jvnObjectLock.entrySet().stream().forEach(entry -> {
+            System.out.println("    read locks found");
+            jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.R).forEach(entry -> {
                 try {
-                    JvnRemoteServer prevWriterJvnServer = entry.getKey();
-                    prevWriterJvnServer.jvnInvalidateReader(jvnObjectId);
-                    jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
+                    JvnRemoteServer prevReaderJvnServer = entry.getKey();
+                    System.out.println("    prevReaderJvnServer: " + prevReaderJvnServer);
+                    System.out.println("    jvnRemoteServer: " + jvnRemoteServer);
+                    if (!prevReaderJvnServer.equals(jvnRemoteServer)) {
+                        System.out.println("    prevReaderJvnServer.equals(jvnRemoteServer): " + prevReaderJvnServer.equals(jvnRemoteServer));
+                        System.out.println("    prevReader is not current write lock requester");
+                        prevReaderJvnServer.jvnInvalidateReader(jvnObjectId);
+                        jvnObjectLock.put(prevReaderJvnServer, LockState.NL);
+                    }
                 } catch (Exception e) {
                     System.err.println("JvnCoord exception: " + e.toString());
                     e.printStackTrace();
@@ -191,40 +208,9 @@ public class JvnCoordImpl
             registry.bind("JvnCoord", jvnCoord);
 
             System.err.println("Coordinator ready");
-
-            setTimeout(() -> echo((JvnCoordImpl) jvnCoord), 10000);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
         }
-    }
-
-    public HashMap<Integer, JvnObject> getJvnObjects() {
-        return jvnObjects;
-    }
-
-    public HashMap<String, Integer> getInternalIdLookupTable() {
-        return internalIdLookupTable;
-    }
-
-    public HashMap<Integer, JvnObjectLock> getJvnObjectLocks() {
-        return jvnObjectLocks;
-    }
-
-    private static void echo(JvnCoordImpl jvnCoord) {
-        System.out.println("state: " + jvnCoord.getJvnObjects().entrySet());
-        System.out.println("lookup: " + jvnCoord.getInternalIdLookupTable().entrySet());
-        System.out.println("jvnObjectLocks: " + jvnCoord.getJvnObjectLocks().entrySet());
-    }
-
-    public static void setTimeout(Runnable runnable, int delay) {
-        new Thread(() -> {
-            try {
-                Thread.sleep(delay);
-                runnable.run();
-            } catch (Exception e) {
-                System.err.println(e);
-            }
-        }).start();
     }
 }

@@ -5,7 +5,7 @@ import java.io.Serializable;
 public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
-    transient private LockState lock;
+    private LockState lock;
 
     JvnObjectImpl(Serializable jvnObjectState, int objectId) throws JvnException {
         System.out.println("JvnObjectImpl.JvnObjectImpl");
@@ -21,6 +21,8 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnLockRead()
             throws jvn.JvnException {
+        System.out.println("JvnObjectImpl.jvnLockRead");
+        System.out.println(this.lock);
         switch (lock) {
             case W:
             case WC:
@@ -116,6 +118,8 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized void jvnInvalidateReader()
             throws jvn.JvnException {
+        System.out.println("JvnObjectImpl.jvnInvalidateReader");
+        System.out.println("    before jvnInvalidateReader: " + lock);
         while (lock == LockState.R || lock == LockState.RWC) {
             try {
                 wait();
@@ -125,6 +129,7 @@ public class JvnObjectImpl implements JvnObject {
         }
 
         lock = LockState.NL;
+        System.out.println("    after jvnInvalidateReader: " + lock);
     }
 
     /**
@@ -135,6 +140,8 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriter()
             throws jvn.JvnException {
+        System.out.println("JvnObjectImpl.jvnInvalidateWriter");
+        System.out.println("    before jvnInvalidateWriter: " + lock);
         while (lock == LockState.W) {
             try {
                 wait();
@@ -144,6 +151,7 @@ public class JvnObjectImpl implements JvnObject {
         }
 
         lock = LockState.NL;
+        System.out.println("    after jvnInvalidateWriter: " + lock);
 
         return state;
     }
@@ -156,6 +164,9 @@ public class JvnObjectImpl implements JvnObject {
      **/
     public synchronized Serializable jvnInvalidateWriterForReader()
             throws jvn.JvnException {
+        System.out.println("JvnObjectImpl.jvnInvalidateWriterForReader");
+        System.out.println("    before invalidateWriterForReader: " + lock);
+
         while (lock == LockState.W) {
             try {
                 wait();
@@ -164,7 +175,15 @@ public class JvnObjectImpl implements JvnObject {
             }
         }
 
-        lock = LockState.RC;
+        switch (lock) {
+            case RWC:
+                lock = LockState.R;
+            case R:
+            case WC:
+                lock = LockState.RC;
+        }
+
+        System.out.println("    after invalidateWriterForReader: " + lock);
 
         return state;
     }

@@ -63,7 +63,9 @@ public class JvnServerImpl
      * @throws JvnException
      **/
     public static JvnServerImpl jvnGetServer() {
+        System.out.println("JvnServerImpl.jvnGetServer");
         if (jvnServer == null) {
+            System.out.println("    jvnServer == null");
             try {
                 jvnServer = new JvnServerImpl();
             } catch (Exception e) {
@@ -140,16 +142,22 @@ public class JvnServerImpl
     public JvnObject jvnLookupObject(String jvnObjectName)
             throws jvn.JvnException {
         // to be completed
+        System.out.println("JvnServerImpl.jvnLookupObject");
         Integer localJvnObjectId = internalIdLookupTable.get(jvnObjectName);
+        System.out.println("    localJvnObjectId: " + localJvnObjectId);
         if (localJvnObjectId != null) {
-            JvnObject localJvnObject = jvnObjects.get(localJvnObjectId);
-            // TODO: return the object ???
+            System.out.println("    localJvnObjectId != null: true");
+            JvnObject jvnObject = jvnObjects.get(localJvnObjectId);
+            System.out.println("    jvnObject: " + jvnObject);
+            return jvnObject;
         }
 
         try {
+            System.out.println("    try getting it from coord");
             JvnObject jvnObject = jvnGetCoord().jvnLookupObject(jvnObjectName, jvnGetServer());
 
             if (jvnObject != null) {
+                System.out.println("    found jvnObject in coord");
                 jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
             }
 
@@ -208,6 +216,7 @@ public class JvnServerImpl
     public void jvnInvalidateReader(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        System.out.println("JvnServerImpl.jvnInvalidateReader");
         JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
@@ -227,6 +236,7 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriter(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        System.out.println("JvnServerImpl.jvnInvalidateWriter");
         JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
@@ -246,6 +256,7 @@ public class JvnServerImpl
     public Serializable jvnInvalidateWriterForReader(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
+        System.out.println("JvnServerImpl.jvnInvalidateWriterForReader");
         JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
