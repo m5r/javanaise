@@ -85,9 +85,7 @@ public class JvnCoordImpl
     public JvnObject jvnLookupObject(String jvnObjectName, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
         // to be completed
-        System.out.println("JvnCoordImpl.jvnLookupObject");
         int jvnObjectId = internalIdLookupTable.get(jvnObjectName);
-        System.out.println("    jvnObjectId: " + jvnObjectId);
         jvnLockRead(jvnObjectId, jvnRemoteServer);
         return jvnObjects.get(jvnObjectId);
     }
@@ -114,17 +112,13 @@ public class JvnCoordImpl
     public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
-        System.out.println("JvnCoordImpl.jvnLockRead");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
 
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
-        System.out.println("    requesterHasWriteLock: " + requesterHasWriteLock);
 
         if (!requesterHasWriteLock) {
             if (jvnObjectLock.containsValue(LockState.W)) {
-                System.out.println("    write lock found but this isnt lock of requester");
                 JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.W).iterator().next().getKey();
-                System.out.println("prevWriterJvnServerLock: " + jvnObjectLock.get(prevWriterJvnServer));
                 Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriterForReader(jvnObjectId);
                 jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
                 jvnObjectLock.put(prevWriterJvnServer, LockState.R);
@@ -147,14 +141,10 @@ public class JvnCoordImpl
     public Serializable jvnLockWrite(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
-        System.out.println("JvnCoordImpl.jvnLockWrite");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
-        System.out.println("    requesterHasWriteLock: " + requesterHasWriteLock);
-        System.out.println("    jvnObjectLock.get(jvnRemoteServer): " + jvnObjectLock.get(jvnRemoteServer));
 
         if (jvnObjectLock.containsValue(LockState.W) && !requesterHasWriteLock) {
-            System.out.println("    write lock found but this isnt lock of requester");
             JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.W).iterator().next().getKey();
             Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriter(jvnObjectId);
             jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
@@ -162,17 +152,11 @@ public class JvnCoordImpl
         }
 
         if (jvnObjectLock.containsValue(LockState.R)) {
-            System.out.println("    read locks found");
             jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.R).forEach(entry -> {
                 try {
                     JvnRemoteServer prevReaderJvnServer = entry.getKey();
-                    System.out.println("    prevReaderJvnServer: " + prevReaderJvnServer);
-                    System.out.println("    jvnRemoteServer: " + jvnRemoteServer);
                     if (!prevReaderJvnServer.equals(jvnRemoteServer)) {
-                        System.out.println("    prevReaderJvnServer.equals(jvnRemoteServer): " + prevReaderJvnServer.equals(jvnRemoteServer));
-                        System.out.println("    prevReader is not current write lock requester");
                         prevReaderJvnServer.jvnInvalidateReader(jvnObjectId);
-                        jvnObjectLock.put(prevReaderJvnServer, LockState.NL);
                     }
                 } catch (Exception e) {
                     System.err.println("JvnCoord exception: " + e.toString());

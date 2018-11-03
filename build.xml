@@ -15,7 +15,7 @@
  ! Contact: sebastien.chassande@inrialpes.fr
  !
 -->
-<project name="JAVANAISE" default="compile">
+<project name="javanaise" default="compile">
 
 	<!-- =======================================================
 	load the following user properties from a file:
