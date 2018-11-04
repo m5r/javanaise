@@ -8,10 +8,13 @@
 
 package jvn;
 
+import java.io.*;
+import java.lang.reflect.Field;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class JvnCoordImpl
@@ -34,6 +37,8 @@ public class JvnCoordImpl
         jvnObjects = new HashMap<>();
         jvnObjectLocks = new HashMap<>();
         objectCount = 0;
+
+        setStateFromBackup();
     }
 
     /**
@@ -73,6 +78,8 @@ public class JvnCoordImpl
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
         }
+
+        this.backupState();
     }
 
     /**
@@ -132,6 +139,8 @@ public class JvnCoordImpl
             jvnObjectLock.put(jvnRemoteServer, LockState.R);
         }
 
+        this.backupState();
+
         return jvnObjects.get(jvnObjectId).jvnGetObjectState();
     }
 
@@ -177,6 +186,8 @@ public class JvnCoordImpl
 
         jvnObjectLock.put(jvnRemoteServer, LockState.W);
 
+        this.backupState();
+
         return jvnObjects.get(jvnObjectId).jvnGetObjectState();
     }
 
@@ -206,5 +217,73 @@ public class JvnCoordImpl
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
         }
+    }
+
+    private void backupState() {
+        File tempFolder = new File("/tmp/javanaise");
+        tempFolder.mkdir();
+
+        ArrayList<String> a = new ArrayList<>(
+                Arrays.asList("internalIdLookupTable", "jvnObjects", "jvnObjectLocks", "objectCount")
+        );
+
+        a.forEach(fieldName -> {
+            try {
+                Field classField = this.getClass().getDeclaredField(fieldName);
+                Serializable fieldValue = (Serializable) classField.get(this);
+                String pathname = String.format("/var/tmp/%s", fieldName);
+                this.writeBackupFile(pathname, fieldValue);
+            } catch (Exception e) {
+                System.err.println("Error while persisting: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void setStateFromBackup() {
+        ArrayList<String> a = new ArrayList<>(
+                Arrays.asList("internalIdLookupTable", "jvnObjects", "jvnObjectLocks", "objectCount")
+        );
+
+        a.forEach(fieldName -> {
+            try {
+                Field classField = this.getClass().getDeclaredField(fieldName);
+                Serializable prevFieldValue = (Serializable) classField.get(this);
+                String pathname = String.format("/var/tmp/%s", fieldName);
+                Serializable fieldValue = this.readBackupFile(pathname);
+                classField.set(this, fieldValue == null ? prevFieldValue : fieldValue);
+            } catch (Exception e) {
+                System.err.println("Error while persisting: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void writeBackupFile(String pathname, Serializable field) throws IOException {
+        FileOutputStream fileOutputStream = new FileOutputStream(pathname);
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+
+        objectOutputStream.writeObject(field);
+
+        fileOutputStream.close();
+        objectOutputStream.close();
+    }
+
+    private Serializable readBackupFile(String pathname) throws IOException {
+        Serializable field = null;
+        FileInputStream fileInputStream = new FileInputStream(pathname);
+        ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+
+        try {
+            field = (Serializable) objectInputStream.readObject();
+        } catch (Exception e) {
+            System.err.println("Error while reading: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        fileInputStream.close();
+        objectInputStream.close();
+
+        return field;
     }
 }
