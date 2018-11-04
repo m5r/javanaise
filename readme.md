@@ -16,3 +16,8 @@ You are on the v2.0 branch, corresponding to the version using dynamic proxies.
 3. Compile it — `javac ./src/**/*.java -cp ./src -d ./build`
 4. Run the coordinator — `java -cp ./build jvn.JvnCoordImpl`
 5. Run the example client — `java -cp ./build irc.Irc`
+
+## Stress test
+
+1. Repeat steps 1 through 4 from the **Quick start**
+2. Run the stresser — `java -cp ./build stress.StressTest`
