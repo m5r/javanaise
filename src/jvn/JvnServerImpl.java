@@ -31,7 +31,6 @@ public class JvnServerImpl
      **/
     private JvnServerImpl() throws Exception {
         super();
-        // to be completed
         jvnObjects = new HashMap<>();
         internalIdLookupTable = new HashMap<>();
     }
@@ -81,7 +80,6 @@ public class JvnServerImpl
      **/
     public void jvnTerminate()
             throws jvn.JvnException {
-        // to be completed
         try {
             jvnGetCoord().jvnTerminate(jvnGetServer());
         } catch (Exception e) {
@@ -98,7 +96,6 @@ public class JvnServerImpl
      **/
     public JvnObject jvnCreateObject(Serializable jvnObjectState)
             throws jvn.JvnException {
-        // to be completed
         try {
             return new JvnObjectImpl(jvnObjectState, jvnGetCoord().jvnGetObjectId());
         } catch (Exception e) {
@@ -118,7 +115,6 @@ public class JvnServerImpl
      **/
     public void jvnRegisterObject(String jvnObjectName, JvnObject jvnObject)
             throws jvn.JvnException {
-        // to be completed
         try {
             jvnGetCoord().jvnRegisterObject(jvnObjectName, jvnObject, jvnGetServer());
             jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
@@ -138,7 +134,6 @@ public class JvnServerImpl
      **/
     public JvnObject jvnLookupObject(String jvnObjectName)
             throws jvn.JvnException {
-        // to be completed
         Integer localJvnObjectId = internalIdLookupTable.get(jvnObjectName);
         if (localJvnObjectId != null) {
             JvnObject jvnObject = jvnObjects.get(localJvnObjectId);
@@ -168,7 +163,6 @@ public class JvnServerImpl
      **/
     public Serializable jvnLockRead(int jvnObjectId)
             throws JvnException {
-        // to be completed
         try {
             return jvnGetCoord().jvnLockRead(jvnObjectId, jvnGetServer());
         } catch (Exception e) {
@@ -186,7 +180,6 @@ public class JvnServerImpl
      **/
     public Serializable jvnLockWrite(int jvnObjectId)
             throws JvnException {
-        // to be completed
         try {
             return jvnGetCoord().jvnLockWrite(jvnObjectId, jvnGetServer());
         } catch (Exception e) {
@@ -204,7 +197,6 @@ public class JvnServerImpl
      **/
     public void jvnInvalidateReader(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
-        // to be completed
         JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
@@ -223,7 +215,6 @@ public class JvnServerImpl
      **/
     public Serializable jvnInvalidateWriter(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
-        // to be completed
         JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {
@@ -242,7 +233,6 @@ public class JvnServerImpl
      **/
     public Serializable jvnInvalidateWriterForReader(int jvnObjectId)
             throws java.rmi.RemoteException, jvn.JvnException {
-        // to be completed
         JvnObject jvnObject = jvnObjects.get(jvnObjectId);
 
         if (jvnObject == null) {

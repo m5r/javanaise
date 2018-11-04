@@ -32,7 +32,6 @@ public class JvnCoordImpl
      * @throws JvnException
      **/
     private JvnCoordImpl() throws Exception {
-        // to be completed
         internalIdLookupTable = new HashMap<>();
         jvnObjects = new HashMap<>();
         jvnObjectLocks = new HashMap<>();
@@ -49,7 +48,6 @@ public class JvnCoordImpl
      **/
     public int jvnGetObjectId()
             throws java.rmi.RemoteException, jvn.JvnException {
-        // to be completed
         return objectCount++;
     }
 
@@ -63,7 +61,6 @@ public class JvnCoordImpl
      **/
     public void jvnRegisterObject(String jvnObjectName, JvnObject jvnObject, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
-        // to be completed
         if (internalIdLookupTable.get(jvnObjectName) != null) {
             throw new jvn.JvnException(String.format("Object with name %s already registered", jvnObjectName));
         }
@@ -91,7 +88,6 @@ public class JvnCoordImpl
      **/
     public JvnObject jvnLookupObject(String jvnObjectName, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, jvn.JvnException {
-        // to be completed
         int jvnObjectId = internalIdLookupTable.get(jvnObjectName);
         jvnLockRead(jvnObjectId, jvnRemoteServer);
         return jvnObjects.get(jvnObjectId);
@@ -118,8 +114,6 @@ public class JvnCoordImpl
      **/
     public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
-        // to be completed
-        System.out.println("JvnCoordImpl.jvnLockRead");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
 
@@ -154,8 +148,6 @@ public class JvnCoordImpl
      **/
     public Serializable jvnLockWrite(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
-        // to be completed
-        System.out.println("JvnCoordImpl.jvnLockWrite");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
 
@@ -199,7 +191,6 @@ public class JvnCoordImpl
      **/
     public void jvnTerminate(JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
-        // to be completed
         jvnObjectLocks.entrySet()
                 .stream()
                 .filter(entry -> entry.getValue().containsKey(jvnRemoteServer))
