@@ -30,7 +30,7 @@ public class Stresser implements Runnable {
         ArrayList<Sentence> jvnObjects = new ArrayList<>();
         for (int i = 0; i < objectsAmount; i++) {
             try {
-                String n = String.format("stresser-%d", i);
+                String n = String.format("jvnObject-stress-%d", i);
                 jvnObjects.add((Sentence) JvnProxy.get(n, new SentenceImpl()));
                 Thread.sleep(250);
             } catch (Exception e) {

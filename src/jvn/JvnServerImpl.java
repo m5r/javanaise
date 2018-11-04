@@ -13,6 +13,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class JvnServerImpl
         extends UnicastRemoteObject
@@ -23,7 +24,7 @@ public class JvnServerImpl
     private HashMap<Integer, JvnObject> jvnObjects;
     private HashMap<String, Integer> internalIdLookupTable;
 
-    private static final int CACHE_LIMIT = 10;
+    private static final int CACHE_LIMIT = 20;
 
     /**
      * Default constructor
@@ -246,7 +247,16 @@ public class JvnServerImpl
             JvnObject oldestJvnObject = jvnObjects.entrySet().stream().min(
                     (jvnObject1, jvnObject2) -> ((JvnObjectImpl) jvnObject1.getValue()).getLastAccess().compareTo(((JvnObjectImpl) jvnObject2.getValue()).getLastAccess())
             ).get().getValue();
-            jvnObjects.remove(oldestJvnObject.jvnGetObjectId());
+            int oldestJvnObjectId = oldestJvnObject.jvnGetObjectId();
+            String oldestJvnObjectName = internalIdLookupTable.entrySet()
+                    .stream()
+                    .filter(entry -> Objects.equals(entry.getValue(), oldestJvnObjectId))
+                    .map(HashMap.Entry::getKey)
+                    .findFirst()
+                    .get();
+
+            jvnObjects.remove(oldestJvnObjectId);
+            internalIdLookupTable.remove(oldestJvnObjectName);
         }
 
         int jvnObjectId = jvnObject.jvnGetObjectId();
