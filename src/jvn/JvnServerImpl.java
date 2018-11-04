@@ -20,11 +20,10 @@ public class JvnServerImpl
 
     // A JVN server is managed as a singleton
     private static JvnServerImpl jvnServer = null;
-    private static JvnRemoteCoord jvnCoord = null;
     private HashMap<Integer, JvnObject> jvnObjects;
     private HashMap<String, Integer> internalIdLookupTable;
 
-    private final int CACHE_LIMIT = 10;
+    private static final int CACHE_LIMIT = 10;
 
     /**
      * Default constructor
@@ -44,16 +43,15 @@ public class JvnServerImpl
      * @throws JvnException
      **/
     private static JvnRemoteCoord jvnGetCoord() {
-        if (jvnCoord == null) {
-            try {
-                Registry registry = LocateRegistry.getRegistry(1029);
-                jvnCoord = (JvnRemoteCoord) registry.lookup("JvnCoord");
-            } catch (Exception e) {
-                System.err.println("JvnCoord exception: " + e.toString());
-                e.printStackTrace();
-            }
+        try {
+            Registry registry = LocateRegistry.getRegistry(1029);
+            return (JvnRemoteCoord) registry.lookup("JvnCoord");
+        } catch (Exception e) {
+            System.err.println("JvnCoord exception: " + e.toString());
+            e.printStackTrace();
         }
-        return jvnCoord;
+
+        return null;
     }
 
     /**

@@ -21,6 +21,7 @@ public class JvnCoordImpl
         extends UnicastRemoteObject
         implements JvnRemoteCoord {
 
+    private final String cacheFolder = "/var/tmp/javanaise";
     private HashMap<String, Integer> internalIdLookupTable;
     private HashMap<Integer, JvnObject> jvnObjects;
     private HashMap<Integer, JvnObjectLock> jvnObjectLocks;
@@ -114,6 +115,7 @@ public class JvnCoordImpl
      **/
     public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
+        System.out.println("JvnCoordImpl.jvnLockRead");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
 
@@ -211,8 +213,10 @@ public class JvnCoordImpl
     }
 
     private void backupState() {
-        File tempFolder = new File("/var/tmp/javanaise");
-        tempFolder.mkdir();
+        File tempFolder = new File(cacheFolder);
+        if (!tempFolder.exists()) {
+            tempFolder.mkdir();
+        }
 
         ArrayList<String> a = new ArrayList<>(
                 Arrays.asList("internalIdLookupTable", "jvnObjects", "jvnObjectLocks", "objectCount")
@@ -222,7 +226,7 @@ public class JvnCoordImpl
             try {
                 Field classField = this.getClass().getDeclaredField(fieldName);
                 Serializable fieldValue = (Serializable) classField.get(this);
-                String pathname = String.format("/var/tmp/%s", fieldName);
+                String pathname = String.format("%s/%s", cacheFolder, fieldName);
                 this.writeBackupFile(pathname, fieldValue);
             } catch (Exception e) {
                 System.err.println("Error while persisting: " + e.getMessage());
@@ -240,17 +244,19 @@ public class JvnCoordImpl
             try {
                 Field classField = this.getClass().getDeclaredField(fieldName);
                 Serializable prevFieldValue = (Serializable) classField.get(this);
-                String pathname = String.format("/var/tmp/%s", fieldName);
+                String pathname = String.format("%s/%s", cacheFolder, fieldName);
                 Serializable fieldValue = this.readBackupFile(pathname);
                 classField.set(this, fieldValue == null ? prevFieldValue : fieldValue);
             } catch (Exception e) {
-                System.err.println("Error while persisting: " + e.getMessage());
+                System.err.println("Error while reading: " + e.getMessage());
                 e.printStackTrace();
             }
         });
     }
 
     private void writeBackupFile(String pathname, Serializable field) throws IOException {
+        System.out.println("JvnCoordImpl.writeBackupFile");
+        System.out.println("pathname: " + pathname);
         FileOutputStream fileOutputStream = new FileOutputStream(pathname);
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
@@ -261,19 +267,23 @@ public class JvnCoordImpl
     }
 
     private Serializable readBackupFile(String pathname) throws IOException {
+        File file = new File(pathname);
+        if (!file.exists() || !file.isFile()) {
+            return null;
+        }
+
         Serializable field = null;
-        FileInputStream fileInputStream = new FileInputStream(pathname);
+        FileInputStream fileInputStream = new FileInputStream(file);
         ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
 
         try {
             field = (Serializable) objectInputStream.readObject();
+
+            fileInputStream.close();
+            objectInputStream.close();
         } catch (Exception e) {
             System.err.println("Error while reading: " + e.getMessage());
-            e.printStackTrace();
         }
-
-        fileInputStream.close();
-        objectInputStream.close();
 
         return field;
     }
