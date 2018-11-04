@@ -1,16 +1,19 @@
 package jvn;
 
 import java.io.Serializable;
+import java.util.Date;
 
 public class JvnObjectImpl implements JvnObject {
     private Serializable state;
     private int id;
     private LockState lock;
+    private Date lastAccess;
 
     JvnObjectImpl(Serializable jvnObjectState, int objectId) throws JvnException {
         state = jvnObjectState;
         id = objectId;
         lock = LockState.NL;
+        lastAccess = new Date();
     }
 
     /**
@@ -83,6 +86,7 @@ public class JvnObjectImpl implements JvnObject {
                 break;
         }
 
+        lastAccess = new Date();
         notifyAll();
     }
 
@@ -170,5 +174,9 @@ public class JvnObjectImpl implements JvnObject {
         }
 
         return state;
+    }
+
+    Date getLastAccess() {
+        return lastAccess;
     }
 }

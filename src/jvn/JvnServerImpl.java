@@ -12,7 +12,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.*;
-import java.util.HashMap;
+import java.util.*;
 
 public class JvnServerImpl
         extends UnicastRemoteObject
@@ -23,6 +23,8 @@ public class JvnServerImpl
     private static JvnRemoteCoord jvnCoord = null;
     private HashMap<Integer, JvnObject> jvnObjects;
     private HashMap<String, Integer> internalIdLookupTable;
+
+    private final int CACHE_LIMIT = 10;
 
     /**
      * Default constructor
@@ -117,8 +119,7 @@ public class JvnServerImpl
             throws jvn.JvnException {
         try {
             jvnGetCoord().jvnRegisterObject(jvnObjectName, jvnObject, jvnGetServer());
-            jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
-            internalIdLookupTable.put(jvnObjectName, jvnObject.jvnGetObjectId());
+            insertJvnObject(jvnObjectName, jvnObject);
         } catch (Exception e) {
             System.err.println("JvnCoord exception: " + e.toString());
             e.printStackTrace();
@@ -144,7 +145,7 @@ public class JvnServerImpl
             JvnObject jvnObject = jvnGetCoord().jvnLookupObject(jvnObjectName, jvnGetServer());
 
             if (jvnObject != null) {
-                jvnObjects.put(jvnObject.jvnGetObjectId(), jvnObject);
+                insertJvnObject(jvnObjectName, jvnObject);
             }
 
             return jvnObject;
@@ -242,4 +243,17 @@ public class JvnServerImpl
         return jvnObject.jvnInvalidateWriterForReader();
     }
 
+    private void insertJvnObject(String jvnObjectName, JvnObject jvnObject) throws jvn.JvnException {
+        if (jvnObjects.size() > CACHE_LIMIT) {
+            JvnObject oldestJvnObject = jvnObjects.entrySet().stream().min(
+                    (jvnObject1, jvnObject2) -> ((JvnObjectImpl) jvnObject1).getLastAccess().compareTo(((JvnObjectImpl) jvnObject2).getLastAccess())
+            ).get().getValue();
+            jvnObjects.remove(oldestJvnObject.jvnGetObjectId());
+        }
+
+        int jvnObjectId = jvnObject.jvnGetObjectId();
+
+        jvnObjects.put(jvnObjectId, jvnObject);
+        internalIdLookupTable.put(jvnObjectName, jvnObjectId);
+    }
 }
