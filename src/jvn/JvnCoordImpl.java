@@ -112,16 +112,21 @@ public class JvnCoordImpl
     public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
+        System.out.println("JvnCoordImpl.jvnLockRead");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
-
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
 
         if (!requesterHasWriteLock) {
             if (jvnObjectLock.containsValue(LockState.W)) {
                 JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.W).iterator().next().getKey();
-                Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriterForReader(jvnObjectId);
-                jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
-                jvnObjectLock.put(prevWriterJvnServer, LockState.R);
+                try {
+                    Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriterForReader(jvnObjectId);
+                    jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
+                    jvnObjectLock.put(prevWriterJvnServer, LockState.R);
+                } catch (Exception e) {
+                    System.err.println("Error invalidating writer: " + e.toString());
+                    jvnTerminate(prevWriterJvnServer);
+                }
             }
 
             jvnObjectLock.put(jvnRemoteServer, LockState.R);
@@ -141,14 +146,20 @@ public class JvnCoordImpl
     public Serializable jvnLockWrite(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
         // to be completed
+        System.out.println("JvnCoordImpl.jvnLockWrite");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
 
         if (jvnObjectLock.containsValue(LockState.W) && !requesterHasWriteLock) {
             JvnRemoteServer prevWriterJvnServer = jvnObjectLock.entrySet().stream().filter(e -> e.getValue() == LockState.W).iterator().next().getKey();
-            Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriter(jvnObjectId);
-            jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
-            jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
+            try {
+                Serializable jvnObjectState = prevWriterJvnServer.jvnInvalidateWriter(jvnObjectId);
+                jvnObjectLock.put(prevWriterJvnServer, LockState.NL);
+                jvnObjects.put(jvnObjectId, new JvnObjectImpl(jvnObjectState, jvnObjectId));
+            } catch (Exception e) {
+                System.err.println("Error invalidating writer: " + e.toString());
+                jvnTerminate(prevWriterJvnServer);
+            }
         }
 
         if (jvnObjectLock.containsValue(LockState.R)) {
@@ -159,8 +170,7 @@ public class JvnCoordImpl
                         prevReaderJvnServer.jvnInvalidateReader(jvnObjectId);
                     }
                 } catch (Exception e) {
-                    System.err.println("JvnCoord exception: " + e.toString());
-                    e.printStackTrace();
+                    System.err.println("Error invalidating reader: " + e.toString());
                 }
             });
         }
