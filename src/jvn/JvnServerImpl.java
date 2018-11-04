@@ -243,5 +243,3 @@ public class JvnServerImpl
     }
 
 }
-
- 

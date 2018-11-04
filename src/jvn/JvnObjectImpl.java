@@ -86,7 +86,6 @@ public class JvnObjectImpl implements JvnObject {
         notifyAll();
     }
 
-
     /**
      * Get the object identification
      *
@@ -106,7 +105,6 @@ public class JvnObjectImpl implements JvnObject {
             throws jvn.JvnException {
         return state;
     }
-
 
     /**
      * Invalidate the Read lock of the JVN object

@@ -10,7 +10,6 @@ package jvn;
 import java.rmi.*;
 import java.io.*;
 
-
 /**
  * Remote Interface of the JVN Coordinator
  */
@@ -80,5 +79,3 @@ public interface JvnRemoteCoord extends Remote {
             throws java.rmi.RemoteException, JvnException;
 
 }
-
-

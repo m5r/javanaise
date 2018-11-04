@@ -12,13 +12,11 @@ import java.awt.event.*;
 
 import jvn.JvnProxy;
 
-
 public class Irc {
     public TextArea text;
     public TextField data;
     Frame frame;
     Sentence sentence;
-
 
     /**
      * main method
@@ -61,7 +59,6 @@ public class Irc {
         frame.setVisible(true);
     }
 }
-
 
 /**
  * Internal class to manage user events (read) on the CHAT application
@@ -107,6 +104,3 @@ class writeListener implements ActionListener {
         irc.sentence.write(s);
     }
 }
-
-
-
