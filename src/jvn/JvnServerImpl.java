@@ -14,7 +14,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.io.*;
 import java.util.HashMap;
 
-
 public class JvnServerImpl
         extends UnicastRemoteObject
         implements JvnLocalServer, JvnRemoteServer {
@@ -173,8 +172,8 @@ public class JvnServerImpl
         try {
             return jvnGetCoord().jvnLockRead(jvnObjectId, jvnGetServer());
         } catch (Exception e) {
-            System.out.printf("Failed to get a read lock for object with id \"%d\" from coordinator\n", jvnObjectId);
-            return null;
+            System.out.printf("Failed to get a read lock for object with id \"%d\" from coordinator, falling back to local cache\n", jvnObjectId);
+            return jvnObjects.get(jvnObjectId).jvnGetObjectState();
         }
     }
 
@@ -191,18 +190,16 @@ public class JvnServerImpl
         try {
             return jvnGetCoord().jvnLockWrite(jvnObjectId, jvnGetServer());
         } catch (Exception e) {
-            System.out.printf("Failed to get a write lock for object with id \"%d\" from coordinator\n", jvnObjectId);
-            return null;
+            System.out.printf("Failed to get a write lock for object with id \"%d\" from coordinator, falling back to local cache\n", jvnObjectId);
+            return jvnObjects.get(jvnObjectId).jvnGetObjectState();
         }
     }
-
 
     /**
      * Invalidate the Read lock of the JVN object identified by id
      * called by the JvnCoord
      *
      * @param jvnObjectId : the JVN object id
-     * @return void
      * @throws java.rmi.RemoteException,JvnException
      **/
     public void jvnInvalidateReader(int jvnObjectId)
