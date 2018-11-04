@@ -4,6 +4,15 @@ As part of the [distributed systems and applications course](http://lig-membres.
 
 You are on the **v2** branch, corresponding to the version using dynamic proxies. You can find the first version of this project within the [v1](https://github.com/m5r/javanaise/tree/v1) branch.
 
+&nbsp;
+
+In this version, it can handle :
+- outages from the coordinator
+- outages from the clients
+- cache limit on the client
+
+Using the stress test helper, the coordinator was tested against 5000 concurrent clients.
+
 ## Requirements
 
 - JDK 8
