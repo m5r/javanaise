@@ -211,7 +211,7 @@ public class JvnCoordImpl
     }
 
     private void backupState() {
-        File tempFolder = new File("/tmp/javanaise");
+        File tempFolder = new File("/var/tmp/javanaise");
         tempFolder.mkdir();
 
         ArrayList<String> a = new ArrayList<>(
