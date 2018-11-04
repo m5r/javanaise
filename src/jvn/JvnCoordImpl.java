@@ -115,7 +115,6 @@ public class JvnCoordImpl
      **/
     public Serializable jvnLockRead(int jvnObjectId, JvnRemoteServer jvnRemoteServer)
             throws java.rmi.RemoteException, JvnException {
-        System.out.println("JvnCoordImpl.jvnLockRead");
         JvnObjectLock jvnObjectLock = getJvnObjectLockFromId(jvnObjectId);
         boolean requesterHasWriteLock = jvnObjectLock.get(jvnRemoteServer) == LockState.W;
 
@@ -255,8 +254,6 @@ public class JvnCoordImpl
     }
 
     private void writeBackupFile(String pathname, Serializable field) throws IOException {
-        System.out.println("JvnCoordImpl.writeBackupFile");
-        System.out.println("pathname: " + pathname);
         FileOutputStream fileOutputStream = new FileOutputStream(pathname);
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
 

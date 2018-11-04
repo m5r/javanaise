@@ -27,7 +27,6 @@ public class Irc {
             Sentence sentence = (Sentence) JvnProxy.get("IRC", new SentenceImpl());
 
             new Irc(sentence);
-
         } catch (Exception e) {
             System.out.println("IRC problem : " + e.getMessage());
         }
