@@ -244,7 +244,7 @@ public class JvnServerImpl
     private void insertJvnObject(String jvnObjectName, JvnObject jvnObject) throws jvn.JvnException {
         if (jvnObjects.size() > CACHE_LIMIT) {
             JvnObject oldestJvnObject = jvnObjects.entrySet().stream().min(
-                    (jvnObject1, jvnObject2) -> ((JvnObjectImpl) jvnObject1).getLastAccess().compareTo(((JvnObjectImpl) jvnObject2).getLastAccess())
+                    (jvnObject1, jvnObject2) -> ((JvnObjectImpl) jvnObject1.getValue()).getLastAccess().compareTo(((JvnObjectImpl) jvnObject2.getValue()).getLastAccess())
             ).get().getValue();
             jvnObjects.remove(oldestJvnObject.jvnGetObjectId());
         }
