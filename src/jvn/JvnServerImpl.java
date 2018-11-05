@@ -48,8 +48,7 @@ public class JvnServerImpl
             Registry registry = LocateRegistry.getRegistry(1029);
             return (JvnRemoteCoord) registry.lookup("JvnCoord");
         } catch (Exception e) {
-            System.err.println("JvnCoord exception: " + e.toString());
-            e.printStackTrace();
+            System.err.println("Error looking up JvnCoord: " + e.toString());
         }
 
         return null;

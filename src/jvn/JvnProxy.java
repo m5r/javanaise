@@ -6,7 +6,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 public class JvnProxy implements InvocationHandler {
-
     private JvnObject jvnObject;
 
     private JvnProxy(String jvnObjectName, Object jvnObjectState) {
